@@ -179,6 +179,20 @@ backend:
         working: "NA"
         comment: "setup_local.py now writes WEBHOOK_CRON_SECRET to backend/.env (the file the platform dispatcher /app/.emergent/cron/dispatch_webhook.sh reads) and removes it from .env.local; other secrets unchanged. Verified by running the real dispatcher script against the current public URL: http=202 (was 401 in /var/log/webhook-cron.log), maintenance_receipts shows queued:true. Never print the secret; test via the dispatcher script or by reading the header value into a shell variable only."
 frontend:
+  - task: "Embedded-frame sign-in (SameSite=None cookies + cookie-blocked detection)"
+    implemented: true
+    working: "NA"
+    file: "backend/modules/auth.py; frontend/src/auth/AuthProvider.tsx; frontend/src/pages/LoginPage.tsx; frontend/src/api/client.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - agent: "user"
+        working: false
+        comment: "User: 'i am not able to login it is saying session expired'."
+      - agent: "main"
+        working: "NA"
+        comment: "Backend access log showed POST /api/auth/login 200 immediately followed by GET /api/applications 401 for the user, while a fresh top-level browser worked. Reproduced with Playwright by embedding the app in a cross-site <iframe> (like a preview panel): SameSite=Lax cookies were not sent from the frame, so every post-login request was 401 and the new interceptor bounced the user to /login with the 'session expired' toast. Fix: session and CSRF cookies now SameSite=None; Secure (exact Origin allow-list, Fetch Metadata guard and session-bound CSRF still enforce cross-site protection); logout delete_cookie updated to match. Frontend: login() now calls /auth/me right after POST /auth/login; if that 401s it throws code COOKIE_BLOCKED with a user message and LoginPage shows it in data-testid='login-error' with an 'Open in a new tab' link (data-testid='open-in-new-tab'); errorMessage() falls back to error.userMessage. Verified manually: embedded-frame citizen login now reaches /citizen with 200s; top-level login unchanged; auth suite 17/17."
   - task: "Expired-session handling and specific load errors"
     implemented: true
     working: "NA"
@@ -254,7 +268,7 @@ metadata:
   run_ui: true
 test_plan:
   current_focus:
-    - "Expired-session handling and specific load errors"
+    - "Embedded-frame sign-in (SameSite=None cookies + cookie-blocked detection)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

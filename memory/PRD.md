@@ -41,6 +41,9 @@ User saw "services may be temporarily unavailable". Root cause: 4h session JWT e
 ## 2026-09-15 — 12-hour demo sessions (DONE, tested)
 User chose 12 h for all roles. `SESSION_HOURS` (default 12, set by setup_local.py in .env.local, validated 0–168 h at startup) now drives both the JWT `exp` and both cookie `max_age` values in backend/modules/auth.py so they cannot drift. Verified: login sets `Max-Age=43200`, decoded JWT lifetime 12.0 h; auth regression suite 17/17 passed. README security table, env list and demo pre-checks updated.
 
+## 2026-09-15 — Embedded-frame sign-in fix (DONE, tested)
+User: "not able to login, it says session expired". Access log: login 200 → next GET 401. Reproduced by embedding the app in a cross-site iframe (preview/portal panel): SameSite=Lax cookies were not sent from the frame. Fix: session + CSRF cookies now `SameSite=None; Secure` (protection kept via exact Origin allow-list, Fetch-Metadata login guard, session-bound CSRF); frontend login() verifies the cookie round-trip with /auth/me and, if the browser blocks it, shows "did not keep the sign-in cookie… open in a new tab" with an **Open in a new tab** link. Testing agent iteration_7: 21/21 frontend assertions (embedded citizen/operator login, navigation and a mutation from inside the frame, cookie attributes, top-level regressions desktop+mobile, COOKIE_BLOCKED UX, expired-session redirect) + 17/17 auth security suite. README security table and stage playbook updated.
+
 ## Backlog
 - P2: Verify timeout-after-commit recovery via the scheduled maintenance path creates exactly one treasury payment (manual retry path already verified).
 - P2: Verify the policy probe calls the real service data-access endpoint and yields an audited 403 (browser flow verified; backend contract test pending).
