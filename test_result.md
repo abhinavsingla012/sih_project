@@ -179,6 +179,20 @@ backend:
         working: "NA"
         comment: "setup_local.py now writes WEBHOOK_CRON_SECRET to backend/.env (the file the platform dispatcher /app/.emergent/cron/dispatch_webhook.sh reads) and removes it from .env.local; other secrets unchanged. Verified by running the real dispatcher script against the current public URL: http=202 (was 401 in /var/log/webhook-cron.log), maintenance_receipts shows queued:true. Never print the secret; test via the dispatcher script or by reading the header value into a shell variable only."
 frontend:
+  - task: "Expired-session handling and specific load errors"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/auth/AuthProvider.tsx; frontend/src/components/shared/Common.tsx; frontend/src/index.js; pages/*.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - agent: "user"
+        working: false
+        comment: "User reports the website 'is not working' at https://txn-orchestrate.preview.emergentagent.com/?utm_source=share and sees 'services may be temporarily unavailable'."
+      - agent: "main"
+        working: "NA"
+        comment: "Root cause: backend log shows the user's browser repeatedly getting 401 on GET /api/monitoring/overview (4h session JWT expired / revoked) while the SPA kept its in-memory user, so pages showed the generic ErrorState 'The service may be temporarily unavailable' (or hung on Loading while react-query retried 401s 3x) instead of returning to sign-in. Reproduced via Playwright (login, clear cookies, navigate → stuck Loading/ErrorState). Fix: AuthProvider axios response interceptor on any 401 except /auth/login clears the query cache and user (Guard then redirects to /login) and shows toast 'Your session has expired. Please sign in again.' (toast id session-expired); logout always clears local state; QueryClient no longer retries 4xx (only network/5xx, max 2); ErrorState now shows the real API error message or HTTP status (data-testid error-state-message) with Try again. tsc clean, webpack compiled."
   - task: "Simple government-inspired UI"
     implemented: true
     working: true
@@ -240,8 +254,7 @@ metadata:
   run_ui: true
 test_plan:
   current_focus:
-    - "Runtime restoration and idempotent setup"
-    - "Scheduled recovery authentication"
+    - "Expired-session handling and specific load errors"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only regression for the expired/revoked session fix. All 8 specified scenarios passed end-to-end against the public preview URL. The 401 axios interceptor clears the query cache, resets user state, shows the 'Your session has expired. Please sign in again.' sonner toast (visible in bottom-right), and Guard redirects to /login without ever showing ErrorState or getting stuck on Loading. ErrorState correctly renders the server-provided message (QUEUE_UNAVAILABLE -> 'Maintenance could not be queued.') for a 503, and falls back to 'HTTP 500' text for a body-less 500 while keeping the user logged in. Retry works, invalid-password inline error still shows without the expired toast, sidebar logout works, deep links redirect to /login, and desktop + mobile 390x844 layouts have no horizontal overflow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AuthProvider.tsx guards toast with userRef.current so a background /auth/me 401 on first load does not spam the toast — good; but the interceptor is registered inside a useEffect that depends on queries, meaning during the first render (before the effect runs) any 401 slips through without cleanup. Low risk since only /auth/me runs before mount, but consider registering the interceptor at module scope or with useLayoutEffect for defense in depth.",
+    "index.js retry policy: `(!error?.response || error.response.status >= 500) && failureCount < 2` retries on network errors (no response), which is desirable, but note this still allows retries on 5xx which may extend user wait; consider surfacing loading feedback for retried queries."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100% (8/8 scenarios)"},
+  "test_credentials": "operator@demo.in / Demo@2026! and citizen@demo.in / Demo@2026! from /app/memory/test_credentials.md",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Expired-session fix (AuthProvider 401 interceptor + no-retry-on-4xx + ErrorState message with data-testid='error-state-message') is verified working on preview URL. Only expected console noise are the 401/503/500 responses generated during the tests themselves. No app code was modified in this iteration.",
+  "scenarios_verified": [
+    "Share link /?utm_source=share on fresh context -> /login rendered (no error, no loading stuck)",
+    "Operator quick-fill login -> /operations Overview with metrics + 'Event consumer connected' live strip",
+    "Citizen quick-fill login -> /citizen",
+    "MAIN BUG operator: clear cookies -> auto/click navigation redirects to /login with 'session has expired' toast, no error-state, re-login succeeds",
+    "MAIN BUG citizen: same behavior via Notifications navigation",
+    "503 QUEUE_UNAVAILABLE intercept on /api/monitoring/overview shows ErrorState with exact message 'Maintenance could not be queued.' and retry button; user stays on /operations",
+    "Retry after unroute reloads overview successfully; error-state gone",
+    "500 with no JSON body shows 'The service returned an unexpected response (HTTP 500).'",
+    "Sidebar logout button (data-testid='logout-button') signs out to /login",
+    "Invalid password shows inline data-testid='login-error' ('Email or password is incorrect.') and no expired toast",
+    "Deep link /operations/transactions while logged out -> /login",
+    "Regression desktop 1920x1080: overview, transactions list, transaction detail, health — all render, no horizontal overflow, no error-state",
+    "Regression mobile 390x844: overview renders with no horizontal overflow"
+  ]
+}
