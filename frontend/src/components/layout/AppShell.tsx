@@ -10,7 +10,7 @@ const links = [ ['/operations','Overview',LayoutDashboard], ['/operations/transa
 export const AppShell = () => {
   const {user,logout}=useAuth(); const [open,setOpen]=useState(false); const location=useLocation();
   const citizen=user.role==='citizen';
-  const nav:any[]=citizen?[['/citizen','My applications',LayoutDashboard],['/citizen/new','Start a service',Layers3],['/citizen/notifications','Notifications',Bell]]:links;
+  const nav:ReadonlyArray<readonly [string,string,typeof LayoutDashboard]>=citizen?[['/citizen','My applications',LayoutDashboard],['/citizen/new','Start a service',Layers3],['/citizen/notifications','Notifications',Bell]]:links;
   const current=nav.find(v=>v[0]===location.pathname)?.[1] || (citizen?'Application details':'Transaction details');
   return <div className="app-shell">
     {open&&<button data-testid="navigation-backdrop" className="nav-backdrop" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}

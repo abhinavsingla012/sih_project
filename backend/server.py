@@ -4,7 +4,7 @@ from fastapi import FastAPI,Request,HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from core.config import setting
+from core.config import TRUSTED_ORIGINS
 from core.database import client,db,bus,indexes,uid
 from modules.seed import seed
 from modules.auth import router as auth_router
@@ -21,7 +21,7 @@ async def lifespan(app):
     await bus.aclose();client.close()
 
 app=FastAPI(title='Samanvay Interoperability Fabric',version='1.0.0',description='SIH26129 prototype. Identity and departments are simulated. Redis event transport and orchestration are real.',openapi_url='/api/openapi.json',docs_url='/api/docs',redoc_url=None,lifespan=lifespan)
-app.add_middleware(CORSMiddleware,allow_origins=[setting('APP_ORIGIN')],allow_credentials=True,allow_methods=['GET','POST','PATCH','OPTIONS'],allow_headers=['Content-Type','X-CSRF-Token','Idempotency-Key','Authorization'])
+app.add_middleware(CORSMiddleware,allow_origins=list(TRUSTED_ORIGINS),allow_credentials=True,allow_methods=['GET','POST','PATCH','OPTIONS'],allow_headers=['Content-Type','X-CSRF-Token','Idempotency-Key','Authorization'])
 
 @app.middleware('http')
 async def request_controls(request:Request,call_next):

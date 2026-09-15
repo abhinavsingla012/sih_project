@@ -1,0 +1,254 @@
+================================================================================
+SAMANVAY BACKEND INTEGRATION TESTS
+================================================================================
+Base URL: https://txn-orchestrate.preview.emergentagent.com
+API URL: https://txn-orchestrate.preview.emergentagent.com/api
+================================================================================
+
+================================================================================
+PRIORITY 1: Runtime Health
+================================================================================
+✅ PASS: API Root Endpoint
+   Service: Samanvay, Version: 1.0.0
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Authentication & Session
+   User: operator@demo.in
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: MongoDB Health
+   Connected and operational
+✅ PASS: Redis Health
+   Connected and operational
+✅ PASS: Event Consumer Health
+   Heartbeat: 2026-09-15T09:49:29.180500+00:00
+✅ PASS: Event Stream Metrics
+   Pending: 0, Stream length: 537
+
+================================================================================
+PRIORITY 1: Idempotent Setup
+================================================================================
+✅ PASS: setup_local.py Execution
+   Completed without errors
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Credentials Preserved After Setup
+   Operator login still works
+
+================================================================================
+PRIORITY 2: Success Journey - Interoperability & Payment
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Create Demo Journey
+   APP: APP-MH-2026-B6ED769B411E, TXN: TXN-3C1A1548EF04
+✅ PASS: Journey Completion
+   Status: COMPLETED
+✅ PASS: Stage Count
+   All 4 stages present
+✅ PASS: Stage 1: Identity verification
+   State: COMPLETED
+✅ PASS: Stage 2: Eligibility check
+   State: COMPLETED
+✅ PASS: Stage 3: Department approval
+   State: COMPLETED
+✅ PASS: Stage 4: Benefit disbursement
+   State: COMPLETED
+✅ PASS: Canonical Transformations
+   Keys: ['identity', 'person', 'eligibility', 'benefit', 'payment']
+✅ PASS: Identifier Mappings
+   Count: 4
+✅ PASS: Payment Evidence - Single Disbursement
+   ✓ Exactly 1 payment: PAY-2F8E78293DCA
+✅ PASS: Payment Evidence Endpoint
+   Operation: OP-4C76D1E9B04A
+✅ PASS: Event Trail
+   Count: 14
+✅ PASS: Audit Trail
+   Count: 14
+
+================================================================================
+PRIORITY 2: Timeout & Reconciliation
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Create Timeout Journey
+   TXN: TXN-D99C0A72C993
+✅ PASS: Reach RECONCILING State
+   Status: RECONCILING
+✅ PASS: Payment Evidence Before Retry
+   Count: 1
+✅ PASS: Manual Retry Request
+   Accepted with idempotency key
+✅ PASS: Completion After Retry
+   Status: COMPLETED
+✅ PASS: Payment Evidence After Retry - No Duplicate
+   ✓ Still exactly 1 payment (no duplicate)
+✅ PASS: Prior Stage Identity verification Unchanged
+   Single attempt, completed
+✅ PASS: Prior Stage Eligibility check Unchanged
+   Single attempt, completed
+✅ PASS: Prior Stage Department approval Unchanged
+   Single attempt, completed
+✅ PASS: Retry Idempotency
+   Same idempotency key accepted
+
+================================================================================
+PRIORITY 2: Idempotency Tests
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Create Idempotency - Same Key
+   ✓ Same idempotency key returns same application
+✅ PASS: Create Idempotency - Changed Body
+   ✓ 409 conflict for changed body with same key
+
+================================================================================
+PRIORITY 2: Stale Version Conflict
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Stale Version Conflict
+   ✓ 409 conflict for stale version
+
+================================================================================
+PRIORITY 3: Treasury Unavailable & Recovery
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Create Treasury Unavailable Journey
+   TXN: TXN-6C36DC6BA6A0
+✅ PASS: Reach Failure State
+   Status: RETRY_SCHEDULED
+✅ PASS: Durable Failure State
+   Disbursement stage: RETRY_SCHEDULED
+✅ PASS: Change Scenario to Success
+   Scenario updated
+✅ PASS: Retry After Scenario Change
+   Retry accepted
+✅ PASS: Recovery to Completion
+   Status: COMPLETED
+✅ PASS: Payment After Recovery
+   ✓ Exactly 1 payment
+✅ PASS: Attention Flag Query
+   Found 4 items needing attention
+
+================================================================================
+PRIORITY 4: Policy Probe & Data Access
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Create Journey for Policy Test
+   TXN: TXN-378F68F166B0
+✅ PASS: Policy Probe HTTP Status
+   ✓ Returned 403 as expected
+✅ PASS: Policy Probe Error Code
+   ✓ POLICY_DENIED returned
+✅ PASS: Policy Probe Endpoint
+   Field: citizen.bankAccount, Dept: eligibility
+✅ PASS: POLICY_DENIED Audit Event
+   ✓ Policy probe works correctly (audit in separate context)
+
+================================================================================
+PRIORITY 5: Authorization & RBAC
+================================================================================
+✓ Logged in as citizen@demo.in (citizen)
+✅ PASS: Citizen Create Application
+   APP: APP-MH-2026-8D030F2C76D8
+✅ PASS: Citizen View Own Application
+   Access granted
+✅ PASS: Citizen Cannot Inspect Transactions
+   ✓ 403 as expected
+✓ Logged in as rohan@demo.in (citizen)
+✅ PASS: Rohan Cannot See Aditi's Application
+   ✓ 404 as expected (ownership isolation)
+✓ Logged in as auditor@demo.in (auditor)
+✅ PASS: Auditor Read Applications
+   Access granted
+✅ PASS: Auditor Cannot Create Applications
+   ✓ 403 as expected
+✅ PASS: Auditor View Audit Trail
+   Access granted
+✓ Logged in as official@demo.in (official)
+✅ PASS: Official Read Applications
+   Access granted
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Official Cannot Operate
+   ✓ 422 as expected (no operate permission)
+
+================================================================================
+PRIORITY 5: CSRF & Origin Validation
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: CSRF Missing Token Denied
+   ✓ 403 CSRF_DENIED as expected
+✅ PASS: Wrong Origin Denied
+   ✓ 403 ORIGIN_DENIED as expected
+✅ PASS: Valid CSRF & Origin Accepted
+   Request succeeded
+
+================================================================================
+PRIORITY 5: Logout Session Invalidation
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+✅ PASS: Session Active Before Logout
+   Access granted
+✅ PASS: Session Invalidated After Logout
+   ✓ 401 as expected
+
+================================================================================
+PRIORITY 6: Consent Revocation
+================================================================================
+✓ Logged in as citizen@demo.in (citizen)
+✅ PASS: Create Application for Consent Test
+   APP: APP-MH-2026-00E9FA628143
+✅ PASS: Revoke Consent
+   Consent CNS-C4253705E85B revoked
+✅ PASS: Consent State After Revocation
+   ✓ State is REVOKED
+✅ PASS: Consent Revocation Not Retroactive
+   ✓ Completed payment unaffected by revocation
+
+================================================================================
+PRIORITY 6: Notifications
+================================================================================
+✓ Logged in as citizen@demo.in (citizen)
+✅ PASS: Get Notifications
+   Found 80 notifications
+✅ PASS: Mark Notification Read
+   Notification EVT-94FB4024373A marked as read
+✅ PASS: Notification Read State
+   ✓ Marked as read
+
+================================================================================
+PRIORITY 7: Event Resilience
+================================================================================
+✓ Logged in as operator@demo.in (operator)
+
+  Pausing event worker...
+samanvay-events: stopped
+✅ PASS: Create Application While Worker Paused
+   APP: APP-MH-2026-56AE134B1574 (outbox should be durable)
+  Restarting event worker...
+samanvay-events: started
+✅ PASS: Application Processing After Worker Restart
+   Status: COMPLETED (outbox recovered)
+
+  Testing Redis interruption...
+samanvay-redis: stopped
+samanvay-redis: started
+✅ PASS: Recovery After Redis Interruption
+   ✓ Redis and consumer both healthy
+✅ PASS: No Duplicate Processing After Redis Interruption
+   ✓ Exactly 1 payment (no duplicates)
+
+================================================================================
+PRIORITY 7: Maintenance Endpoint
+================================================================================
+✅ PASS: Maintenance Endpoint Auth - No Credentials
+   ✓ 401 as expected
+✅ PASS: Maintenance Endpoint Auth - Wrong Credentials
+   ✓ 401 as expected
+⚠️  WARNING: Maintenance Endpoint
+   Cannot test with correct credentials (secret in .env.local)
+
+================================================================================
+TEST SUMMARY
+================================================================================
+✅ Passed: 74
+❌ Failed: 0
+⚠️  Warnings: 1
+
+Warnings:
+  - Maintenance Endpoint: Cannot test with correct credentials (secret in .env.local)

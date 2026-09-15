@@ -6,7 +6,7 @@ import bcrypt
 import jwt
 from fastapi import APIRouter, Request, Response, Depends
 from pydantic import BaseModel, ConfigDict, Field
-from core.config import setting
+from core.config import setting, TRUSTED_ORIGINS
 from core.database import db, uid, now
 from core.errors import fail
 router = APIRouter(prefix='/api/auth', tags=['Identity'])
@@ -47,13 +47,17 @@ async def principal(request: Request) -> Principal:
         csrf = request.headers.get('x-csrf-token', '')
         if not secrets.compare_digest(hashlib.sha256(csrf.encode()).hexdigest(), session['csrf_hash']):
             fail(403, 'CSRF_DENIED', 'Invalid request verification token.')
-        if request.headers.get('origin') not in (None, setting('APP_ORIGIN')):
+        if request.headers.get('origin') not in (None, *TRUSTED_ORIGINS):
             fail(403, 'ORIGIN_DENIED', 'Request origin is not permitted.')
     request.state.session_id = session['id']
     return Principal(**user)
 @router.post('/login', response_model=Principal)
 async def login(body: Login, request: Request, response: Response):
-    if request.headers.get('origin') not in (None, setting('APP_ORIGIN')):
+    # The preview proxy rewrites Origin; browser Fetch Metadata preserves
+    # whether this login was initiated by another site or sibling origin.
+    if request.headers.get('sec-fetch-site') in ('cross-site', 'same-site'):
+        fail(403, 'ORIGIN_DENIED', 'Request origin is not permitted.')
+    if request.headers.get('origin') not in (None, *TRUSTED_ORIGINS):
         fail(403, 'ORIGIN_DENIED', 'Request origin is not permitted.')
     user = await MockIdentityAdapter().authenticate_user(body.email, body.password)
     sid, csrf = uid('SESSION'), secrets.token_urlsafe(32)
