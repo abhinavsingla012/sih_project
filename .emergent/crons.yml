@@ -1,0 +1,8 @@
+crons:
+  - name: workflow-recovery
+    description: "Recovers due workflow retries and republishes durable pending events."
+    cron: "*/15 * * * *"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/internal/maintenance/recover"
+    method: POST
+    enabled: true

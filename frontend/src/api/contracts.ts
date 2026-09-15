@@ -1,0 +1,4 @@
+export type Role = 'citizen' | 'operator' | 'auditor' | 'official';
+export interface User {id: string; name: string; email: string; role: Role; department?: string; subject?: string}
+export interface Stage {id:string; name:string; system:string; connector:string; state:string; external_id?:string; started_at?:string; completed_at?:string; operation_id:string; attempts:any[]; evidence?:any; policy?:any; error?:string}
+export interface Application {id:string; transaction_id:string; person_reference:string; owner_name:string; service_code:string; course_code:string; district:string; status:string; created_at:string; updated_at:string; version:number; stages:Stage[]; events:any[]; audit:any[]; consents:any[]; mappings:any[]; canonical:any; scenario?:string; next_retry_at?:string; amount:number; is_demo:boolean}

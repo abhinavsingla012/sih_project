@@ -1,0 +1,1 @@
+"""Synthetic department systems; separate authoritative collections and HTTP boundaries."""

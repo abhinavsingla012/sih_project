@@ -31,6 +31,9 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+.env.local
+.env.*.local
+/backend/runtime-data/
 
 *token.json*
 *credentials.json*
@@ -83,3 +86,9 @@ android-sdk/
 
 # overlay black-box crash/user-report dumps — session data, never history
 **/.emergent/recordings/
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials

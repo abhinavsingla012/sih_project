@@ -1,89 +1,60 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
+from contextlib import asynccontextmanager
+import hashlib,logging
+from fastapi import FastAPI,Request,HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from core.config import setting
+from core.database import client,db,bus,indexes,uid
+from modules.seed import seed
+from modules.auth import router as auth_router
+from modules.router import router as domain_router
+from mock_departments.router import router as mock_router
+from modules.events import ensure_group
 
+@asynccontextmanager
+async def lifespan(app):
+    await indexes();await seed()
+    try:await ensure_group()
+    except Exception:logging.warning('Redis unavailable at startup; outbox remains durable')
+    yield
+    await bus.aclose();client.close()
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+app=FastAPI(title='Samanvay Interoperability Fabric',version='1.0.0',description='SIH26129 prototype. Identity and departments are simulated. Redis event transport and orchestration are real.',openapi_url='/api/openapi.json',docs_url='/api/docs',redoc_url=None,lifespan=lifespan)
+app.add_middleware(CORSMiddleware,allow_origins=[setting('APP_ORIGIN')],allow_credentials=True,allow_methods=['GET','POST','PATCH','OPTIONS'],allow_headers=['Content-Type','X-CSRF-Token','Idempotency-Key','Authorization'])
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+@app.middleware('http')
+async def request_controls(request:Request,call_next):
+    request.state.request_id=uid('REQ')
+    try:length=int(request.headers.get('content-length','0'))
+    except ValueError:return JSONResponse(status_code=400,content={'error':{'code':'INVALID_LENGTH','message':'Invalid content length.'}})
+    if length>65536:return JSONResponse(status_code=413,content={'error':{'code':'BODY_TOO_LARGE','message':'Request exceeds the 64 KB limit.'}})
+    path=request.url.path
+    if path.startswith('/api/') and request.method not in ('GET','OPTIONS') and not path.startswith(('/api/mock/','/api/internal/')):
+        session=request.cookies.get('samanvay_session') or (request.client.host if request.client else 'anonymous')
+        identity=hashlib.sha256(session.encode()).hexdigest()[:24]
+        key=f'rate:{"login" if path=="/api/auth/login" else "mutate"}:{identity}'
+        try:
+            count=await bus.incr(key)
+            if count==1:await bus.expire(key,60)
+            if count>(30 if path=='/api/auth/login' else 120):return JSONResponse(status_code=429,headers={'Retry-After':'60'},content={'error':{'code':'RATE_LIMIT','message':'Too many requests. Please wait a minute.'}})
+        except Exception:
+            if path=='/api/auth/login':return JSONResponse(status_code=503,content={'error':{'code':'AUTH_UNAVAILABLE','message':'Sign-in protection is temporarily unavailable.'}})
+    response=await call_next(request)
+    response.headers['X-Request-ID']=request.state.request_id
+    response.headers['X-Content-Type-Options']='nosniff'
+    response.headers['Cache-Control']='no-store'
+    return response
 
-# Create the main app without a prefix
-app = FastAPI()
+@app.exception_handler(HTTPException)
+async def http_error(request,e):
+    detail=e.detail if isinstance(e.detail,dict) else {'code':'REQUEST_FAILED','message':str(e.detail)}
+    return JSONResponse(status_code=e.status_code,content={'error':{**detail,'requestId':getattr(request.state,'request_id',None),'retryable':e.status_code in (429,503)}})
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+@app.exception_handler(RequestValidationError)
+async def validation_error(request,e):
+    return JSONResponse(status_code=422,content={'error':{'code':'VALIDATION_ERROR','message':'Please check the required fields and permitted values.','requestId':getattr(request.state,'request_id',None),'details':[{'field':'.'.join(str(x) for x in err['loc']),'message':err['msg']} for err in e.errors()]}})
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+app.include_router(auth_router);app.include_router(domain_router);app.include_router(mock_router)
+@app.get('/api/')
+async def root():return {'service':'Samanvay','version':'1.0.0','prototype':True}
