@@ -167,13 +167,30 @@ backend:
         working: false
         comment: "Maintenance endpoint authentication tested: correctly rejects missing/wrong credentials (401). Cannot test with actual WEBHOOK_CRON_SECRET (in .env.local). Known issue: cron dispatcher credential mismatch remains unresolved."
 frontend:
+  - task: "Simple government-inspired UI"
+    implemented: true
+    working: true
+    file: "frontend/src/government-theme.css; frontend/src/App.js; frontend/src/pages/LoginPage.tsx; frontend/src/components/shared/Common.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - agent: "user"
+        working: "NA"
+        comment: "Requested Indian/Maharashtra-inspired blue, green, white and orange, then emphasized normal, clean, not complicated; backend matters most. Explicitly approved desktop/mobile UI and sign-in browser testing with yes."
+      - agent: "main"
+        working: "NA"
+        comment: "Applied simple shared navy/white/green/saffron skin, system typography and Marathi brand caption. Simplified login diagram to plain department list; prototype disclaimers retained. Existing routes/actions/backend unchanged. Three edited JS/TSX files lint clean; production yarn build compiled successfully. Need real visual and functional checks at 1920x800 and 390x844, populated pages and dialogs, no horizontal overflow."
+      - agent: "testing"
+        working: true
+        comment: "✅ UI VERIFIED - ALL VISUAL AND FUNCTIONAL TESTS PASSED. Desktop (1920x800): Clean government theme applied with correct colors (Gov Blue #173e70, Saffron #e88a27, Ink #20334d, Teal #23753c). Login page shows simplified department list (not diagram), Marathi brand caption visible. All pages render correctly: operations overview with 4 metrics, transactions list, connectors, mappings, exceptions, policy, audit, health. Transaction detail page shows stages/evidence/events/audit/consent tabs. Demo dialog and recovery dialog working. Mobile (390x844): All pages responsive, mobile navigation toggle working, transaction views functional, citizen form usable. No horizontal overflow detected on either viewport. Prototype disclaimers present throughout. Screenshots: 15 captured showing all flows. Theme is simple, clean, normal as requested - not complicated."
   - task: "Reported sign-in origin rejection"
     implemented: true
-    working: false
+    working: true
     file: "backend/modules/auth.py; backend/server.py; frontend/src/api/client.ts"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - agent: "main"
         working: "NA"
@@ -187,25 +204,30 @@ frontend:
       - agent: "testing"
         working: false
         comment: "❌ ROOT CAUSE IDENTIFIED via browser reproduction and backend logs. Browser sends Origin header as 'https://txn-orchestrate.cluster-5.preview.emergentcf.cloud' (internal K8s cluster domain) but APP_ORIGIN is 'https://txn-orchestrate.preview.emergentagent.com' (external user-facing domain). This is a Kubernetes ingress/proxy configuration mismatch. Evidence: Playwright test captured 403 ORIGIN_DENIED (Request ID: REQ-1D9F5049C9C4), backend logs show actual Origin header value differs from configured APP_ORIGIN. Window.location.origin correctly shows external URL. Screenshots captured at desktop (1920x800) and mobile (390x844) viewports showing error state. Auth logic is correct; issue is infrastructure-level domain mismatch between ingress routing and application configuration."
+      - agent: "testing"
+        working: true
+        comment: "✅ USER-REPORTED LOGIN BUG FIXED AND VERIFIED via real browser testing at exact URL. Desktop (1920x800): operator@demo.in/Demo@2026! login successful, navigated to /operations with 4 metrics loaded, NO 'Request origin is not permitted' error. Session persistence verified: page reload retained session without redirect to login. Logout/relogin working. Invalid password test: proper error message 'Email or password is incorrect' displayed, then successful login with correct credentials. Citizen login (citizen@demo.in) successful, navigated to /citizen. Mobile (390x844): Both operator and citizen login working. Window.location.origin correctly shows https://txn-orchestrate.preview.emergentagent.com. One authenticated action verified: policy probe returned 403 ACCESS DENIED as expected with audit trail. CSRF headers working (application submission successful). Network errors: 5 expected 401s (/me before login, invalid password attempt, session timeout) - not application issues. Backend TRUSTED_ORIGINS fix (public + internal cluster domain) working correctly. Screenshots: 15 captured across all flows. Login origin rejection bug is RESOLVED."
   - task: "Frontend build and existing UI flows"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/components/ui/*.d.ts; frontend/src/components/layout/AppShell.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - agent: "main"
         working: "NA"
         comment: "Confirmed JSX forwardRef empty-prop TS2322 errors and readonly nav mismatch after jsconfig removal. Added typed declaration bridges preserving JSX runtime/design, corrected nav typing. Build in progress. Frontend testing awaits explicit permission after backend test."
+      - agent: "testing"
+        working: true
+        comment: "✅ ALL UI FLOWS VERIFIED. Comprehensive browser testing completed across desktop (1920x800) and mobile (390x844). Operator workspace: Overview page with live metrics (51 applications, 94.3% success rate, 0 active, 4 attention), navigation to all 7 sections (transactions, connectors, mappings, exceptions, policy, audit, health) working. Transaction detail page: stage selection (identity/eligibility/approval/disbursement), evidence tabs (journey/events/audit/consent), policy probe (403 denial), correlation mappings, demo dialog, recovery dialog all functional. Citizen workspace: Applications list, new service form with course/district selection and consent checkboxes, application submission, detail page with progress, notifications page all working. Mobile: Navigation toggle, all pages responsive and functional. AppShell layout working correctly with sidebar, topbar, breadcrumbs, user profile, logout. No rendering issues, no broken components. Build artifacts serving correctly."
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
 test_plan:
-  current_focus:
-    - "Reported sign-in origin rejection"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -220,3 +242,5 @@ agent_communication:
     message: "✅ ORIGIN AUTH FIX VERIFIED - ALL 27 REGRESSION TESTS PASSED. Created /app/tests/test_auth_origins.py with explicit Origin headers to test browser login scenario. USER-REPORTED BUG FIXED: Login through public URL now works (200 with session). Backend correctly accepts both public and internal cluster origins. Comprehensive testing: origin validation (trusted accepted, untrusted rejected 403), CSRF validation (valid+trusted succeeds, valid+untrusted rejected, invalid rejected), session management (login/logout/revocation), cookie security (Secure, HttpOnly, correct paths), CORS (trusted allowed, untrusted rejected, no wildcards). Direct ASGI tests confirm backend code correctly validates origins when bypassing proxy. Proxy behavior documented: K8s ingress rewrites *.preview.emergentagent.com origins to internal domain (infrastructure behavior). Test results: /app/tests/test_auth_origins_results.txt. Backend auth fix complete and verified. Frontend testing awaits user permission."
   - agent: "testing"
     message: "✅ TRUTHFUL FETCH METADATA RETEST COMPLETE - ALL 17 TESTS PASSED. Previous test_auth_origins.py had FALSE PASSES: lines 199-232 counted proxy-accepted hostile neighbor/suffix origins as PASS (infrastructure behavior, not security verification), lines 640/702 counted ASGI 503 as PASS (rate limit, not origin validation). Created new truthful test suite /app/tests/test_fetch_metadata_auth.py per review request. FETCH METADATA DEFENSE WORKING: Browser same-origin (Sec-Fetch-Site: same-origin) succeeds. Browser same-site (Sec-Fetch-Site: same-site) REJECTED even with forged public origin. Browser cross-site (Sec-Fetch-Site: cross-site) REJECTED even with forged internal origin. Legacy clients without Fetch Metadata: trusted origin succeeds, untrusted rejected. Literal 'Origin: null' rejected (403), no Origin header succeeds. Invalid password (401), /me working, logout revokes, cookies correct. CSRF+Origin validation working on mutations. KNOWN PROXY LIMITATION EXPLICITLY DOCUMENTED (NOT security pass): K8s ingress rewrites *.preview.emergentagent.com to internal domain before backend sees it. Fetch Metadata mitigates for modern browsers. Legacy clients without Fetch Metadata remain vulnerable to proxy rewriting (infrastructure limitation, not backend issue). Test results: /app/tests/test_fetch_metadata_results.txt. No application code changes made (READ ONLY per review request). Truthful test reporting complete. Browser verification still pending user permission."
+  - agent: "testing"
+    message: "✅ FRONTEND UI + LOGIN BROWSER TESTING COMPLETE - ALL TESTS PASSED. User explicitly approved testing at https://txn-orchestrate.preview.emergentagent.com/login. CRITICAL USER-REPORTED BUG FIXED: 'Request origin is not permitted' error NO LONGER APPEARS. Desktop (1920x800) comprehensive tests: (1) Operator login successful, /operations loaded with 4 metrics, no origin error. (2) Session persistence: reload retained session. (3) Logout/relogin working. (4) Invalid password: proper error displayed, then successful login. (5) All navigation working: transactions, connectors, mappings, exceptions, policy, audit, health. (6) Transaction inspection: stages (identity/eligibility/approval/disbursement), tabs (journey/events/audit/consent), policy probe returned 403 ACCESS DENIED as expected, demo dialog and recovery dialog functional. (7) Citizen flow: login, /citizen, new service form with consent checkboxes, application submission successful, notifications page, logout. (8) No horizontal overflow. Mobile (390x844): Login (operator/citizen), mobile nav toggle, transaction view, citizen form all working. No horizontal overflow. Theme verified: Gov Blue #173e70, Saffron #e88a27, clean simple design as requested. Screenshots: 15 captured. Network: 5 expected 401s (not issues). CSRF headers working. Backend TRUSTED_ORIGINS fix verified through real browser clicks. Login bug RESOLVED."

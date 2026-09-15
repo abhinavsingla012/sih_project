@@ -1,0 +1,182 @@
+/* A restrained government-inspired skin. Existing layouts and workflows stay intact. */
+:root {
+  --ink: #20334d;
+  --muted-ink: #566578;
+  --line: #dce2e9;
+  --teal: #23753c;
+  --teal-dark: #195c2e;
+  --mint: #edf6ef;
+  --page: #f4f6f8;
+  --amber: #a45a10;
+  --primary: 138 54% 30%;
+  --ring: 215 64% 32%;
+  --foreground: 215 41% 21%;
+  --muted-foreground: 215 16% 39%;
+  --border: 214 23% 89%;
+  --radius: .25rem;
+  --gov-blue: #173e70;
+  --gov-saffron: #e88a27;
+}
+body, h1, h2, h3, .brand, .brand-caption, .metric-value,
+.network-core > strong, .benefit-summary > strong {
+  font-family: Arial, 'Nirmala UI', sans-serif;
+}
+body { color: var(--ink); background: var(--page); line-height: 1.5; }
+h1, h2, h3 { color: var(--gov-blue); font-weight: 600; }
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 2px solid #2563a4;
+  outline-offset: 3px;
+}
+.brand { color: var(--gov-blue); font-size: 24px; font-weight: 700; }
+.brand-mark { background: var(--gov-blue); border-radius: 4px; }
+.brand-caption { font-size: 10px; color: #596a7f; font-weight: 400; margin-top: 6px; }
+.sidebar { border-top: 4px solid var(--gov-saffron); padding-top: 25px; }
+.workspace-label { color: #5b6777; font-size: 10px; margin-top: 32px; }
+.nav-link { color: #43546c; font-size: 13px; border-radius: 3px; }
+.nav-link:hover { background: #eef3f9; color: var(--gov-blue); }
+.nav-link.active { color: #fff; background: var(--gov-blue); font-weight: 500; }
+.nav-link.active:before { background: var(--gov-saffron); }
+.topbar { background: var(--gov-blue); border-top: 4px solid var(--gov-saffron); border-bottom: 0; }
+.topbar .breadcrumbs, .topbar .breadcrumbs strong, .topbar .breadcrumbs > span,
+.topbar .topbar-right, .topbar .mobile-menu { color: #fff; }
+.topbar .environment { color: #fff; background: #ffffff14; border-color: #ffffff60; }
+.topbar .state-mark { background: #9bc4a6; }
+.breadcrumbs { font-size: 12px; }
+.topbar-right { font-size: 11px; }
+.environment { color: var(--gov-blue); background: #eef3f9; border-color: #d4dfed; font-size: 10px; }
+.workspace main { animation: none; }
+.workspace footer, .login-footer { color: #526174; font-size: 11px; background: #fff; }
+.demo-notice, .demo-notice > span, .user-text > span { color: #59697b; }
+.demo-notice { font-size: 10px; line-height: 1.8; }
+.avatar { color: var(--gov-blue); background: #edf2f8; border-radius: 4px; }
+.page-heading h1 { font-size: 28px; font-weight: 600; }
+.page-heading p { color: var(--muted-ink); font-size: 13px; }
+.eyebrow { color: #5b6b7e; font-size: 10px; }
+.primary-button { border-radius: 3px; box-shadow: none; font-size: 12px; font-weight: 600; }
+.text-link { color: #205a99; font-size: 12px; }
+.text-link:hover { color: #143b67; text-decoration: underline; }
+.subtle, .metric-top, .metric-caption, .section-heading p { color: #59697b; }
+.metric, .connector-card, .workflow-stage, .application-table,
+.mapping-table, .audit-table, .registry-card, .health-card { box-shadow: none; border-radius: 4px; }
+.metric { border-top: 3px solid var(--gov-blue); }
+.metric:last-child { border-top-color: var(--gov-saffron); }
+.metric-top { font-size: 12px; }
+.metric-value { color: var(--gov-blue); font-size: 30px; }
+.metric-caption { font-size: 11px; }
+.section-heading h2 { font-size: 17px; }
+.section-heading p { font-size: 12px; }
+.live-strip, .fabric-bottom { color: #526477; }
+.fabric-visual { background: #fff; border-color: var(--line); }
+.fabric-central { background: #eef3f9; border-color: #cbd9e9; color: var(--gov-blue); border-radius: 4px; }
+.fabric-central strong { color: var(--gov-blue); }
+.fabric-central span, .fabric-bottom > span { color: #526477; }
+.connector-card { border-color: var(--line); }
+.connector-card:hover { box-shadow: none; border-color: #8ba8ca; }
+.connector-card h3 { color: var(--gov-blue); }
+.connector-card p, .connector-meta { color: #59697b; font-size: 11px; }
+.table-heading, .mapping-table-header, .audit-table-heading {
+  background: #edf2f8; color: #3e5571; font-size: 10px; font-weight: 600;
+}
+.application-row:hover { background: #f6f9fc; }
+.status-badge { font-size: 10px; font-weight: 600; }
+.status-badge.success { background: #edf6ef; color: #24653a; }
+.status-badge.warning { background: #fff4e5; color: #8d4c0c; }
+.status-badge.danger { background: #fff0ee; color: #a1352c; }
+.status-badge.neutral { background: #eef2f6; color: #4c5f76; }
+.workflow-stage.selected { border-color: var(--gov-blue); box-shadow: 0 0 0 1px var(--gov-blue); }
+.workflow-stage > strong { font-size: 12px; }
+.workflow-system { color: #59697b; }
+.mapping-table-row code { color: #275988; }
+.mapping-table-row > span { color: #566578; }
+.form-section-title h2, .benefit-summary h3 { color: var(--gov-blue); }
+.form-grid label, .service-form label, .consent-footnote { color: #4c5e73; }
+.form-grid select { background: #fff; color: var(--ink); }
+.benefit-summary > strong { color: var(--gov-blue); }
+.benefit-summary p, .summary-stage { color: #536579; }
+.form-error { color: #a12d25; border-color: #edc9c5; background: #fff2f0; }
+
+/* Simple masthead and two-column sign-in, rather than a decorative landing page. */
+.login-page { background: var(--page); }
+.gov-utility-bar {
+  background: var(--gov-blue); color: #fff; padding: 9px 5%;
+  display: flex; justify-content: space-between; gap: 16px; font-size: 11px;
+  border-top: 4px solid var(--gov-saffron);
+}
+.login-header { padding: 22px 5%; background: #fff; border-bottom: 1px solid var(--line); }
+.login-header .brand { font-size: 26px; }
+.login-header .brand-caption { font-size: 11px; }
+.login-content {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px;
+  max-width: 1040px; padding: 44px 0; align-items: start;
+}
+.login-form-area { background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--gov-blue); border-radius: 4px; padding: 30px; max-width: none; }
+.login-form-area > .eyebrow { color: #53677f; margin-bottom: 12px; font-size: 10px; }
+.login-form-area h1 { color: var(--gov-blue); font-size: 27px; line-height: 1.35; font-weight: 600; }
+.login-subtitle { color: #566578; font-size: 13px; margin: 12px 0 23px; }
+.login-roles { gap: 10px; grid-template-columns: 1fr 1fr; }
+.login-roles button { color: #4c6078; padding: 12px 10px; border-color: #d4deea; border-radius: 3px; }
+.login-roles button.selected { background: #edf3fb; border-color: #5079a8; color: var(--gov-blue); }
+.login-roles button span { font-size: 11px; }
+.login-roles button small { color: #5f6f81; font-size: 10px; }
+.login-roles button > svg { flex-shrink: 0; }
+.login-form-area form label { color: #344961; font-size: 12px; }
+.login-form-area input { border-color: #b9c6d5; border-radius: 3px; color: #24374e; font-size: 14px; height: 42px; }
+.login-submit { height: 43px; font-size: 13px; }
+.login-security { color: #54677a; font-size: 11px; align-items: flex-start; line-height: 1.6; }
+.login-security svg { flex-shrink: 0; }
+.demo-password { color: #59697b; font-size: 11px; }
+.login-network {
+  padding: 14px 0; background: none; border: 0; color: var(--ink); display: block;
+}
+.network-heading { text-align: left; margin-bottom: 24px; }
+.network-heading h2 { color: var(--gov-blue); font-size: 24px; line-height: 1.4; font-weight: 600; margin-top: 10px; }
+.network-heading .eyebrow { color: #94600c; font-size: 10px; }
+.gov-service-description { color: #536579; font-size: 13px; line-height: 1.85; margin-bottom: 25px; }
+.gov-department-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.gov-department-row { display: flex; gap: 14px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.gov-department-row > svg { color: var(--gov-blue); flex-shrink: 0; }
+.gov-department-row strong { display: block; color: var(--gov-blue); font-size: 13px; font-weight: 600; }
+.gov-department-row span { display: block; font-size: 11px; color: #59697b; margin-top: 4px; }
+.gov-service-note { border-left: 3px solid #2d793f; background: #edf6ef; padding: 13px 15px; font-size: 12px; line-height: 1.7; margin-top: 24px; color: #355b40; }
+.network-caption { color: #59697b; font-size: 11px; text-align: left; line-height: 1.7; margin-top: 18px; }
+.login-footer { border-top-color: var(--line); padding: 18px 5%; }
+
+@media (max-width: 1250px) {
+  .sidebar .brand { font-size: 22px; }
+  .sidebar .brand-caption { font-size: 10px; }
+  .nav-link { font-size: 12px; }
+  .login-content { gap: 32px; }
+  .login-form-area { padding: 25px; }
+}
+@media (max-width: 760px) {
+  .gov-utility-bar { padding: 8px 20px; font-size: 10px; gap: 12px; }
+  .gov-utility-bar > span { min-width: 0; }
+  .login-header { padding: 18px 20px; align-items: center; }
+  .login-header .brand { font-size: 22px; }
+  .login-header .brand-caption { font-size: 10px; }
+  .login-header .environment { font-size: 9px; white-space: normal; text-align: center; max-width: 90px; }
+  .login-content { display: block; padding: 25px 18px; width: 100%; }
+  .login-form-area { padding: 23px 20px; }
+  .login-form-area h1 { font-size: 25px; }
+  .login-roles button { gap: 7px; padding: 11px 8px; }
+  .login-roles button span { font-size: 10px; }
+  .login-roles button small { font-size: 9px; }
+  .login-form-area input { font-size: 16px; }
+  .login-network { margin: 28px auto 0; padding: 0 4px; }
+  .network-heading h2 { font-size: 22px; }
+  .login-footer { padding: 18px 20px; font-size: 10px; }
+  .sidebar { padding-top: 25px; }
+  .sidebar .brand-caption { font-size: 10px; }
+  .workspace-label { font-size: 10px; }
+  .topbar { padding: 0 18px; }
+  .topbar .environment { font-size: 9px; }
+  .breadcrumbs { font-size: 11px; min-width: 0; }
+  .page-heading h1 { font-size: 26px; }
+  .metric-value { font-size: 28px; }
+  .metric-caption { font-size: 10px; }
+  .metric-top { font-size: 11px; }
+  .section-heading .text-link { font-size: 10px; }
+  .workspace footer { font-size: 10px; }
+}

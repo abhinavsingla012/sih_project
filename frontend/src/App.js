@@ -1,4 +1,5 @@
 import '@/App.css';
+import '@/government-theme.css';
 import {BrowserRouter,Routes,Route,Navigate,Outlet} from 'react-router-dom';
 import {AuthProvider,useAuth} from './auth/AuthProvider';
 import {AppShell} from './components/layout/AppShell';
