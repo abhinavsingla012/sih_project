@@ -126,12 +126,18 @@ backend:
         comment: "✅ TRUTHFUL FETCH METADATA TESTS - ALL 17 TESTS PASSED. Previous test report had FALSE PASSES (lines 199-232 counted proxy-accepted hostile origins as pass, lines 640/702 counted ASGI 503 as pass). Created new truthful test suite /app/tests/test_fetch_metadata_auth.py. FETCH METADATA DEFENSE VERIFIED: Browser same-origin (Sec-Fetch-Site: same-origin) succeeds (200). Browser same-site (Sec-Fetch-Site: same-site) REJECTED (403 ORIGIN_DENIED) even with forged public origin. Browser cross-site (Sec-Fetch-Site: cross-site) REJECTED (403 ORIGIN_DENIED) even with forged internal origin. Legacy clients without Fetch Metadata: trusted origin succeeds, untrusted origin rejected by exact allowlist. EDGE CASES: Literal 'Origin: null' string rejected (403), no Origin header succeeds (server clients). AUTHENTICATION: Invalid password returns 401, /me endpoint working, logout revokes session, cookie attributes correct (Secure, HttpOnly for session, paths). CSRF+ORIGIN: Valid CSRF+trusted origin succeeds, invalid CSRF rejected (403 CSRF_DENIED), valid CSRF+untrusted origin rejected (403 ORIGIN_DENIED). KNOWN PROXY LIMITATION DOCUMENTED (NOT security pass): K8s ingress rewrites *.preview.emergentagent.com origins to internal domain before reaching backend. Fetch Metadata mitigates this for modern browsers. Legacy clients without Fetch Metadata remain vulnerable to proxy rewriting (infrastructure limitation). Test results: /app/tests/test_fetch_metadata_results.txt. Backend auth fix verified with truthful reporting."
   - task: "Runtime restoration and idempotent setup"
     implemented: true
-    working: true
+    working: false
     file: "backend/setup_local.py; scripts/restore_runtime.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
+      - agent: "user"
+        working: false
+        comment: "Screenshot TXN-C6080D53F2BD shows SUBMITTED, 0/4 stages, one event. Asked what is happening; no repair authorized yet."
+      - agent: "main"
+        working: false
+        comment: "Read-only inspection confirmed APP-MH-2026-E4ECB5BAC03C exists in configured DB test_database (53 applications), all stages PENDING with zero attempts, APPLICATION_CREATED unpublished and no stream ID, zero treasury payments. Redis and event consumer failed startup and are not processing. Redis logs execvp FileNotFoundError at startup; binary currently exists and PATH includes /usr/bin, so precise initial availability cause remains uncertain. Worker initial ensure_group failure occurs outside reconnect loop. No lost data, no resubmission needed, no fix claimed. Troubleshooter initial wrong-DB/PATH diagnosis rejected and corrected."
       - agent: "main"
         working: "NA"
         comment: "Restored Redis system dependency and custom supervisor services. Recreated ignored secrets and operational config; extended setup to preserve values and accept runtime URLs via environment. Services restarted."
