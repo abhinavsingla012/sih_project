@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 9 validation of multi-scheme (3 schemes / 3 departments), officer scoping, seeded synthetic history (~109 apps), demo journeys with scheme selection and regenerate-demo-history. Backend: pytest suite /app/backend/tests/test_multi_scheme.py — 14 passed, 1 skipped (policy rules endpoint not exposed at /api/policy/rules — skipped, not a failure). Covers: GET /api/services returns all 3 schemes with correct amounts (15000/25000/40000), 18 districts incl. Pune, stage systems (identity=State Resident Registry, treasury=State Treasury, eligibility+approval=scheme system); unit-scoped inboxes for sjsa/agri/skill officers; skill officer 404 on scholarship txn and 404 on decision POST; full citizen→sjsa sanction of a new scholarship (option UG, district Nagpur) reaches COMPLETED 4/4 with disbursement_count=1 and canonical benefit amount=25000; new-application POST without consent → 400/422; monitoring overview has by_scheme with all 3 codes and total≥80; every seeded status (COMPLETED/UNDER_REVIEW/REJECTED/RETRY_SCHEDULED/RECONCILING/HUMAN_INTERVENTION_REQUIRED/BLOCKED) has ≥1 seeded row; a non-Aditi/Rohan COMPLETED seed has 4 COMPLETED stages, evidence with mapping_version/canonical_output/lineage, attempts with duration_ms, ≥14 sequential events incl REVIEW_DECIDED, 4 mappings, 1 disbursement; seeded REJECTED has approval.review.decision=REJECTED with remarks; demo journey (drip, success, auto) COMPLETED with 40000 payout; demo journey (scholarship, treasury_unavailable, auto) reaches RETRY_SCHEDULED/RECONCILING/HUMAN_INTERVENTION_REQUIRED; POST /api/demo/dataset/reset as citizen → 403. Existing regression suites re-run: /app/tests/test_fetch_metadata_auth.py 17/17 pass, /app/backend/tests/test_review_flow.py 12/12 pass. Frontend Playwright: (a) citizen@demo.in /citizen shows service-catalogue with three cards catalogue-MH_SKILL_BENEFIT/…SCHOLARSHIP/…DRIP_IRRIGATION_SUBSIDY carrying ₹15,000/₹25,000/₹40,000 and apply links each. (b) /citizen/new?scheme=MH_POST_MATRIC_SCHOLARSHIP: page-title 'Post-matric scholarship', eyebrow 'NEW APPLICATION · SOCIAL JUSTICE & SPECIAL ASSISTANCE', new-benefit-amount '₹25,000', option-label 'Course level' with HSC/DIPLOMA/UG/PG, scholarship option aria-checked=true; switching to scheme-option-MH_DRIP_IRRIGATION_SUBSIDY updates URL, title 'Drip irrigation subsidy', amount ₹40,000, option-label 'Crop' with SUGARCANE/COTTON/GRAPES/POMEGRANATE/SOYBEAN. (c) operator@demo.in /operations shows metric-0 total 124 caption '3 schemes · 3 departments' before reset (110 after reset), scheme-table with three scheme-row-<code>, totals 55/45/24 summing to 124, awaiting ≥1 each; clicking scheme-row-MH_DRIP_IRRIGATION_SUBSIDY navigates to /operations/transactions?scheme=MH_DRIP_IRRIGATION_SUBSIDY with application-scheme-filter preselected to MH_DRIP_IRRIGATION_SUBSIDY. (d) Officer scoping: sjsa@demo.in eyebrow 'SOCIAL JUSTICE & SPECIAL ASSISTANCE · MAHARASHTRA', current-user 'Prakash Waghmare · Assistant Commissioner, Social Justice', 4 pending rows all starting 'Post-matric scholarship'; agri@demo.in eyebrow 'AGRICULTURE · MAHARASHTRA', user 'Sunita Jadhav · District Superintending Agriculture Officer', 4 rows all 'Drip irrigation subsidy'; official@demo.in eyebrow 'SKILL DEVELOPMENT & ENTREPRENEURSHIP · MAHARASHTRA', user 'Meera Kulkarni · Deputy Commissioner, Skill Development', 9 rows all 'Skill development training benefit'. (e) Regenerate demo history (LAST) — reset-demo-data icon opens reset-demo-dialog, confirm-reset-demo triggers regeneration and metric-0 refreshes to 110 (~109 target). (f) Responsive 390x844 on /citizen, /citizen/new (drip) and /operations all report scrollWidth-clientWidth=0 (no horizontal overflow).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/policy/rules", "issue": "Endpoint not present (404) — could not verify from backend the eligibility rule purpose is 'Benefit Eligibility' and field scheme.optionCode. Frontend policy page probably reads elsewhere; if the intent is to expose it publicly for verification, add a listing endpoint. Test was skipped, not failed."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_multi_scheme.py",
+    "/app/backend/tests/test_review_flow.py",
+    "/app/tests/test_fetch_metadata_auth.py",
+    "/app/test_reports/pytest/multi_scheme.xml"
+  ],
+  "action_items": [
+    "(Optional) Expose GET /api/policy/rules (or equivalent) for backend verification of eligibility rule purpose='Benefit Eligibility' and field='scheme.optionCode'. Currently only reachable via /operations/policy UI."
+  ],
+  "critical_code_review_comments": [
+    "modules/repository.py catalogue_entry() 422 codes (UNKNOWN_SERVICE / INVALID_OPTION / INVALID_DISTRICT) should be smoke-tested by main agent — pytest already covers positive path; suggest adding negative unit tests to lock the shape of 422 responses.",
+    "Aditi's citizen list shows 18 applications instead of the seed's 3 because prior manual/auto demo journeys created by test runs (regression) still target her citizen ID. After 'Regenerate demo history' the seed dataset resets to 110, but Aditi/Rohan owned demo-journey creations persist between resets since dataset.py only resets synthetic *@synthetic.demo.in owners. Not a bug per spec, but worth noting that citizen@demo.in application-count text does NOT equal '3 applications' when running against a workspace that has been used for demo journeys — the review request assertion 'application-count says 3 applications' will only hold on a completely fresh seed with no operator-created demo journeys. Recommend: either scope 'Regenerate demo history' to also clear operator-created demo journeys owned by real accounts, or update the acceptance criteria.",
+    "OverviewPage metric-0 caption is dynamic ('3 schemes · 3 departments') and reads from the by_scheme count — good; unit test to lock this string would prevent silent regressions if seed is trimmed to 2 schemes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_multi_scheme.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 executed multi-scheme tests, 12/12 review, 17/17 fetch-metadata; 1 skipped due to missing endpoint)",
+    "frontend": "100% (catalogue, new-application scheme switching, operator overview scheme table + drilldown, 3 officer inbox scoping, regenerate demo history, mobile responsive)"
+  },
+  "test_credentials": "operator@demo.in / citizen@demo.in / sjsa@demo.in (Prakash Waghmare) / agri@demo.in (Sunita Jadhav) / official@demo.in (Meera Kulkarni) — Demo@2026!",
+  "seed_data_creation": "Multi-scheme pytest created ~7 applications and 2 demo journeys via API (scholarship end-to-end sanctioned; drip auto success; scholarship treasury_unavailable). Regenerate-demo-history at the end wiped the synthetic *@synthetic.demo.in dataset back to 110 rows; operator-owned demo journeys created earlier in the run persist and are attributed to Aditi (see code review note).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 9 features all functional. Reusable pytest file at /app/backend/tests/test_multi_scheme.py covers catalogue, officer scoping, seeded history and demo journeys — idempotent (creates fresh cases each run). Regenerate-demo-history has already been executed against this workspace; total applications now ≈ 110. If citizen@demo.in application-count is expected to read '3 applications' in a future acceptance test, main agent may need dataset.py to also purge non-synthetic Aditi/Rohan demo journeys on reset. No frontend or backend blocker found. Policy rules verification was deferred (endpoint absent) — verified indirectly via /operations/policy UI in prior iterations.",
+  "rca of the issue": "No blocking bugs. One minor observation: dataset.seed_dataset(reset=True) resets synthetic history but does not remove real-account (citizen@demo.in / rohan@demo.in) demo journeys, so post-reset the citizen list will still contain any accumulated test-run journeys. Mitigation: scope reset to also delete operator-created demo journeys owned by real citizen accounts, or use a dedicated demo_scenarios collection tag for cleanup."
+}
