@@ -1158,7 +1158,7 @@ async def test_maintenance_endpoint(results: TestResults):
     print("="*80)
     
     try:
-        # Note: We cannot test with the actual WEBHOOK_CRON_SECRET as it's in .env.local
+        # Note: the real WEBHOOK_CRON_SECRET lives in backend/.env (platform dispatcher file); covered by tests/test_iteration5_resilience.py
         # We'll test the authentication and envelope validation
         
         async with httpx.AsyncClient(base_url=API_URL, timeout=30.0) as client:
@@ -1194,7 +1194,7 @@ async def test_maintenance_endpoint(results: TestResults):
             # But we can verify the endpoint exists and validates the envelope structure
             
             results.add_warning("Maintenance Endpoint", 
-                              "Cannot test with correct credentials (secret in .env.local)")
+                              "Correct-credential path covered by test_iteration5_resilience.py (secret in backend/.env)")
         
     except Exception as e:
         results.add_fail("Maintenance Endpoint", str(e))

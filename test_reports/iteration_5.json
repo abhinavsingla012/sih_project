@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 5 backend-only testing. Validated the infra/startup changes: run_redis.py self-healing, event_worker.py startup retry, supervisor hardening, restore_runtime.py, and WEBHOOK_CRON_SECRET migration to backend/.env for the platform cron dispatcher. All 14 iteration-5 targeted tests pass, existing 74/74 backend_test.py regression passes, and 17/17 fetch-metadata auth suite passes. All services left RUNNING.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/tests/test_iteration5_resilience.py",
+    "/app/test_reports/pytest/iter5.xml",
+    "/app/tests/backend_test.py",
+    "/app/tests/test_fetch_metadata_auth.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend_test.py Maintenance Endpoint test comment says 'secret in .env.local' but the secret is now in backend/.env after the fix. Comment should be updated for accuracy (non-blocking).",
+    "test_iteration5_resilience.py originally used httpx cookies.get() which raised CookieConflict because both root path and /api path cookies are set. Fixed by reading from response cookies.jar. Consider tightening backend Set-Cookie Path handling to avoid duplicate cookies, though this is cosmetic and does not affect browser or curl behavior."
+  ],
+  "updated_files": ["/app/tests/test_iteration5_resilience.py (new)"],
+  "success_rate": {"backend": "100% (14/14 iter5 + 74/74 regression + 17/17 auth)", "frontend": "not tested (skipped per request)"},
+  "test_credentials": "From /app/memory/test_credentials.md — Demo@2026! for all demo accounts.",
+  "seed_data_creation": "None. Test-created applications persisted normally; no cleanup requested.",
+  "verified_scenarios": [
+    "supervisorctl all RUNNING (backend, samanvay-redis, samanvay-events); redis-cli PONG; API root 200; /monitoring/overview shows redis+consumer HEALTHY",
+    "Login 200 for operator@demo.in and citizen@demo.in with samanvay_session + samanvay_csrf; wrong password -> 401 (not 503)",
+    "Citizen e2e: POST /api/applications -> 201; within ~10s COMPLETED with all 4 stages COMPLETED; operator payment-evidence shows exactly 1 disbursement",
+    "Redis outage: stopped samanvay-redis; samanvay-events remained RUNNING (did not crash); login returned 503 during outage as designed; after restart, login 200, heartbeat key samanvay:consumer:heartbeat present, new application completes 4/4",
+    "Startup-with-redis-down: stopped both; started samanvay-events first (redis still down); worker stayed RUNNING; after redis start it proceeded and new application COMPLETED",
+    "Dispatcher: /app/.emergent/cron/dispatch_webhook.sh with correct env returned http=202 twice within same minute (idempotent); wrong bearer -> 401; maintenance_receipts contains workflow-recovery-<utc-ts> ids",
+    "setup_local.py idempotent (2 runs OK); backend/.env contains WEBHOOK_CRON_SECRET, backend/.env.local does NOT; MONGO_URL and DB_NAME preserved",
+    "restore_runtime.py exits 0 and leaves all services RUNNING",
+    "Regression: /app/tests/backend_test.py 74 passed / 0 failed / 1 warning (test's own outdated comment about secret location); /app/tests/test_fetch_metadata_auth.py 17/17 passed"
+  ],
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration-5 focused suite at /app/tests/test_iteration5_resilience.py covers infra resilience (redis outage while worker running, worker startup with redis down), dispatcher (success/idempotent/wrong-bearer), health, e2e journey, setup idempotence, and restore_runtime. Uses REACT_APP_BACKEND_URL public host. Does not print WEBHOOK_CRON_SECRET. Existing /app/tests/backend_test.py still passes 74/74; its 'Maintenance Endpoint' warning about the secret living in .env.local is now stale (secret moved to .env). All services confirmed RUNNING at end of run."
+}
