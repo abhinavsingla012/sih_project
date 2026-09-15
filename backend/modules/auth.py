@@ -27,6 +27,8 @@ class Principal(BaseModel):
     department: str | None = None
     subject: str | None = None
     designation: str | None = None
+    unit: str | None = None
+    unit_name: str | None = None
 class IdentityAdapter:
     async def authenticate_user(self, email: str, password: str):
         raise NotImplementedError

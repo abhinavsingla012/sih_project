@@ -3,9 +3,26 @@
 **Smart India Hackathon problem statement SIH26129 — System integration among government digital platforms.**
 
 Samanvay (Marathi/Sanskrit: *coordination*) is a prototype that lets one citizen application flow across
-three independent government systems that were never designed to talk to each other — a Citizen Registry,
-a Skill Development department and the State Treasury — while keeping every department authoritative for
-its own data. It does not replace any government system; it makes them work together.
+independent government systems that were never designed to talk to each other — a State Resident Registry,
+the line department that owns a scheme (Skill Development, Social Justice or Agriculture) and the State
+Treasury — while keeping every department authoritative for its own data. It does not replace any government
+system; it makes them work together.
+
+**Scheme catalogue (three departments, one application experience):**
+
+| Scheme | Owning department | Benefit | Officer account |
+| --- | --- | --- | --- |
+| Skill development training benefit | Skill Development & Entrepreneurship | ₹15,000 | `official@demo.in` |
+| Post-matric scholarship | Social Justice & Special Assistance | ₹25,000 | `sjsa@demo.in` |
+| Drip irrigation subsidy | Agriculture | ₹40,000 | `agri@demo.in` |
+
+Every application follows the same four-stage journey — identity → eligibility → **officer sanction** →
+disbursement — and pauses at stage 3 until an officer of the owning department decides it from their
+**Review inbox** (human-in-the-loop). Officers only see their own department's cases.
+
+On first start the sandbox seeds a realistic synthetic history (~110 applications over the last 60 days,
+inbox items for each officer, and an exception backlog); regenerate it any time with
+`python backend/seed_dataset.py --reset` or the *Regenerate demo history* button on the operations overview.
 
 > **Simulation boundary (read this first).** The three departments, the identity provider, the citizens and
 > the payments are **simulated** inside this repository. The HTTP calls between the orchestrator and the
@@ -355,17 +372,18 @@ to the unified transaction view, whose **Correlation** panel lists every externa
 | ⏱ | Step | Click | What to say / what the jury sees |
 | --- | --- | --- | --- |
 | 0:00 | **The problem** | Window A → **Overview** | "Three departments, three protocols, no shared ID. Today a citizen carries paper between them." Point at the *Connected public services* cards: JSON + API key, JSON + bearer, XML + HMAC. |
-| 1:00 | **Citizen submits once** | Window B → **Start a service** → pick a course and district → tick both consent boxes → **Apply now** | Note the two consent receipts (eligibility, treasury) and the single `APP-MH-2026-…` ID. Copy the **TXN** ID. |
-| 1:45 | **Watch it propagate** | Window B stays on the application page | Within ~10 s the four stages turn *Completed*: Identity → Eligibility → Approval → Disbursement. "Four departments, one status, no re-entry of data." Show **Notifications**. |
+| 1:00 | **Citizen submits once** | Window B → **Start a service** → choose a scheme card (e.g. *Drip irrigation subsidy*) → pick the crop/course and district → tick both consent boxes → **Submit application** | Note the two consent receipts (eligibility, treasury) and the single `APP-MH-2026-…` ID. Copy the **TXN** ID. |
+| 1:45 | **Watch it propagate, then pause for a human** | Window B stays on the application page | Within ~5 s stages 1–2 turn *Completed* and stage 3 reads **Awaiting officer decision** — the citizen sees *"Your application is with the department for a decision"*. "The fabric never sanctions a benefit on its own." |
+| 2:15 | **Officer sanctions** | Window C → sign in as the scheme's officer (`agri@demo.in` for the subsidy) → **Review inbox** → open the case → type remarks → **Sanction benefit** | The case shows only the department's own evidence. Sanction issues the order in the department system and instructs the treasury; stage 4 completes within seconds and the citizen's page flips to *Completed* with the officer of record and remarks. Show that `official@demo.in` (Skill Development) cannot even see this case. |
 | 2:30 | **Same transaction, operator view** | Window A → **Transactions** → paste the TXN in *Search application, transaction or citizen…* → open it | Header shows APP ID ↔ TXN ID. In the **Service journey** tab select each stage: the *Schema transformation* panel shows the **Department response** next to the **Canonical model** with the lineage rows (`SUCCESS → ELIGIBLE`, `DD/MM/YYYY ↔ ISO · transient`, `/payment/state → DISBURSED → COMPLETED`). |
 | 3:45 | **Identifier correlation** | Same page → right-hand **Correlation** panel (*One transaction. Every reference.*) | `CID-…`, `BEN-…`, `APR-…`, `PAY-…` all hang off the one TXN. Sidebar **Schema mappings** shows the pinned, inspectable contracts — no executable mapping expressions. |
 | 4:30 | **Event stream** | **Event stream** tab | Sequence numbers, `causation_id` chain, Redis stream IDs on every published event. "This is a durable outbox published to Redis Streams and consumed by a separate process — at-least-once, honestly labelled." |
-| 5:15 | **Failure: timeout after commit** | **New demo journey** → choose **Treasury timeout** → **Start journey** | Stages 1–3 complete; stage 4 goes **RECONCILING** with a recovery banner: *"Treasury outcome requires recovery"*. Explain: "The treasury paid, but the response was lost. The dangerous move is to pay again." |
+| 5:15 | **Failure: timeout after commit** | **New demo journey** → pick a scheme → choose **Treasury timeout** and **Auto-sanction** → **Start journey** | Stages 1–3 complete; stage 4 goes **RECONCILING** with a recovery banner: *"Treasury outcome requires recovery"*. Explain: "The treasury paid, but the response was lost. The dangerous move is to pay again." (The seeded **Exceptions** page already holds reconciling, retry-scheduled, needs-investigation and policy-blocked cases if you prefer not to create one live.) |
 | 6:30 | **Prove no double payment** | **Recover transaction** → type a recovery reason → confirm | Watch attempt 2 finish as **RECONCILED**: the adapter queried the treasury ledger by the original `OP-…` key and found the payment. The disbursement stage panel reads **1 disbursement in the treasury ledger** with the `PAY-…` reference. "One payment. Provable from the department's own ledger." |
-| 7:45 | **Failure: department down** | **New demo journey** → **Treasury unavailable** → **Start journey** | Stage 4 gets a real HTTP 503 → **RETRY_SCHEDULED**, backoff shown. Click **Restore simulator**, then **Recover transaction** → completes with exactly one payment. Mention the `*/15 min` scheduled recovery does this automatically when nobody is watching. |
-| 9:00 | **Real authorization** | On any transaction → **Run authorization check** | The Skill Development *service token* asks for `citizen.bankAccount`. Result: **HTTP 403 POLICY_DENIED** with a decision ID. Switch to the **Audit trail** tab: the `POLICY_DENIED` entry was recorded *before* the refusal was returned. Sidebar **Policy & consent** shows the allow-list with default DENY. |
+| 7:45 | **Failure: department down** | **New demo journey** → **Treasury unavailable** + **Auto-sanction** → **Start journey** | Stage 4 gets a real HTTP 503 → **RETRY_SCHEDULED**, backoff shown. Click **Restore simulator**, then **Recover transaction** → completes with exactly one payment. Mention the `*/15 min` scheduled recovery does this automatically when nobody is watching. |
+| 9:00 | **Real authorization** | On any transaction → **Run authorization check** | The line-department *service token* asks for `citizen.bankAccount`. Result: **HTTP 403 POLICY_DENIED** with a decision ID. Switch to the **Audit trail** tab: the `POLICY_DENIED` entry was recorded *before* the refusal was returned. Sidebar **Policy & consent** shows the allow-list with default DENY. |
 | 10:15 | **Citizen control** | Window B → the application → **Consent** tab → **Revoke consent** on the treasury consent | Revocation is recorded; completed stages stay intact ("not retroactive"), any future treasury exchange for this application would be BLOCKED. |
-| 11:00 | **Isolation & least privilege** | Sign out window B, sign in as `rohan@demo.in` → try to open Aditi's application URL | `Application not found` (404, not 403 — no existence leak). Optionally sign in as `official@demo.in`: only eligibility/approval evidence is visible. |
+| 11:00 | **Isolation & least privilege** | Sign out window B, sign in as `rohan@demo.in` → try to open Aditi's application URL | `Application not found` (404, not 403 — no existence leak). Sign in as `official@demo.in`: only Skill Development cases and only eligibility/sanction evidence are visible; a Skill officer opening a scholarship TXN also gets 404. |
 | 11:45 | **Close** | Window A → **System health** | Success rate, latency per connector, stream length, pending messages, consumer heartbeat. "Departments stay authoritative. Samanvay only coordinates — and proves it." |
 
 **If something goes wrong on stage**
@@ -436,13 +454,25 @@ yarn build        # production build
 
 | Email | Role | Notes |
 | --- | --- | --- |
-| `citizen@demo.in` | Citizen — Aditi Patil | Registry subject `DEMO-CITIZEN-001`, eligible (age 18–35) |
+| `citizen@demo.in` | Citizen — Aditi Patil | Registry subject `DEMO-CITIZEN-001`, eligible for all three schemes; seeded with a small personal history |
 | `rohan@demo.in` | Citizen — Rohan Shah | Used to prove ownership isolation |
-| `operator@demo.in` | Platform operator | Demo journeys, recovery, policy probe |
-| `official@demo.in` | Skill Development official | Sees only eligibility/approval evidence |
+| `operator@demo.in` | Platform operator | Demo journeys, recovery, policy probe, regenerate demo history |
+| `official@demo.in` | Skill Development officer — Meera Kulkarni | Review inbox for the training benefit only |
+| `sjsa@demo.in` | Social Justice officer — Prakash Waghmare | Review inbox for the post-matric scholarship only |
+| `agri@demo.in` | Agriculture officer — Sunita Jadhav | Review inbox for the drip irrigation subsidy only |
 | `auditor@demo.in` | Auditor | Read-only inspection |
 
 Password for all: `Demo@2026!` (configurable via `DEMO_PASSWORD`).
+
+### Synthetic demo history
+
+`backend/modules/dataset.py` generates ~110 internally consistent applications (events, audit, stage evidence,
+department mock records and treasury ledger entries) spread over the last 60 days: ~70 completed, ~12 waiting in
+the three officer inboxes, ~11 rejected (ineligible or refused by an officer) and an exception backlog
+(retry scheduled, reconciling, needs investigation, policy blocked). Every seeded case is **actionable** — officers
+can sanction it and operators can recover it through the real workflow. It runs automatically on first start
+when the database has no seeded history; `python seed_dataset.py --reset` (or `POST /api/demo/dataset/reset`)
+wipes all applications and regenerates it. Synthetic citizens cannot sign in.
 
 ### Tests
 
@@ -472,15 +502,16 @@ trusted `Origin`. Interactive docs: `/api/docs`.
 | Method & path | Role | Purpose |
 | --- | --- | --- |
 | `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` | any | Session lifecycle (cookie-based) |
-| `GET /services` | any | Service catalogue (`MH_SKILL_BENEFIT`, ₹15 000) |
-| `POST /applications` (`Idempotency-Key`) | citizen | Submit application with consents |
-| `GET /applications` · `GET /applications/{id\|txn}` | all (scoped) | List / unified status; citizens see own only |
+| `GET /services` | any | Scheme catalogue (three schemes with options, districts, department and stage systems) |
+| `POST /applications` (`Idempotency-Key`) | citizen | Submit application (`service_code`, `option_code`, `district`) with consents |
+| `GET /applications?status=&service_code=&search=` · `GET /applications/{id\|txn}` | all (scoped) | List / unified status; citizens see own only |
+| `GET /reviews?state=pending\|decided` · `POST /reviews/{key}/decision` (`decision`, `remarks`, `version`) | official (own department only) | Officer review inbox; SANCTION resumes the workflow, REJECT ends it |
 | `GET /transactions/{key}` | operator, auditor, official | Full evidence view |
 | `POST /transactions/{key}/stages/{stage}/retry` (`Idempotency-Key`, `version`) | operator | Recover a `RECONCILING` / `RETRY_SCHEDULED` / `HUMAN_INTERVENTION_REQUIRED` stage |
 | `GET /transactions/{key}/payment-evidence` | operator | Treasury ledger count for the disbursement operation |
 | `POST /applications/{key}/consents/{id}/revoke` | citizen | Revoke a consent (non-retroactive) |
 | `POST /transactions/{key}/data-access` | service (bearer) | Policy-gated field exchange; audited ALLOW/DENY |
-| `POST /demo/journeys` · `POST /demo/transactions/{key}/scenario` · `POST /demo/transactions/{key}/policy-probe` | operator (`DEMO_MODE`) | Scenario controls: `success`, `timeout_after_commit`, `treasury_unavailable`; live 403 probe |
+| `POST /demo/journeys` (`scenario`, `service_code`, `review`) · `POST /demo/transactions/{key}/scenario` · `POST /demo/transactions/{key}/policy-probe` · `POST /demo/dataset/reset` | operator (`DEMO_MODE`) | Scenario controls: `success`, `timeout_after_commit`, `treasury_unavailable`; officer vs auto sanction; live 403 probe; regenerate synthetic history |
 | `GET /connectors` · `GET /mappings` · `GET /policies` · `GET /audit` · `GET /monitoring/overview` | inspect roles | Registry of contracts, mappings, policy rules, audit trail, health |
 | `GET /notifications` · `PATCH /notifications/{id}` | any (scoped) | Citizen/operator notifications |
 | `POST /internal/maintenance/recover` | cron (Bearer `WEBHOOK_CRON_SECRET`) | Scheduled recovery; idempotent on `run_id`; 202 then background |

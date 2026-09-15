@@ -13,6 +13,8 @@ from core.config import setting, DEMO
 from core.database import db, uid, now
 from core.errors import fail
 from modules.auth import StrictModel, Principal
+from modules.definitions import SCHEMES
+BENEFIT_AMOUNTS = {str(s['amount']) for s in SCHEMES.values()}
 
 router = APIRouter(prefix='/api/mock', tags=['Simulated department boundaries'])
 async def demo_only():
@@ -35,7 +37,8 @@ class EligibilityRequest(StrictModel):
     uid: str = Field(max_length=100)
     birth_date: str = Field(max_length=10)
     verification: Literal['VERIFIED']
-    course_code: Literal['DATA_ANALYTICS', 'ELECTRIC_VEHICLES', 'WEB_DEVELOPMENT']
+    scheme_code: str = Field(max_length=60)
+    option_code: str = Field(max_length=40)
 class EligibilityResponse(BaseModel):
     beneficiary_id: str
     verification: Literal['SUCCESS', 'INELIGIBLE']
@@ -76,11 +79,13 @@ async def token(body: ClientCredentials):
 async def check(body: EligibilityRequest, service=Depends(service_principal)):
     try: dob = datetime.strptime(body.birth_date, '%d/%m/%Y')
     except ValueError: fail(422, 'INVALID_DATE', 'Expected DD/MM/YYYY.')
+    scheme = SCHEMES.get(body.scheme_code)
+    if not scheme or body.option_code not in scheme['options']: fail(422, 'UNKNOWN_SCHEME', 'Scheme or option is not administered by this department.')
     existing = await db.mock_eligibility.find_one({'operation_id':body.operation_id}, {'_id':0})
     if existing: return EligibilityResponse(**existing['response'])
     age = (datetime.now(timezone.utc).date() - dob.date()).days / 365.2425
-    response = {'beneficiary_id':uid('BEN'), 'verification':'SUCCESS' if 18 <= age <= 35 else 'INELIGIBLE'}
-    await db.mock_eligibility.update_one({'operation_id':body.operation_id}, {'$setOnInsert':{'operation_id':body.operation_id,'response':response,'uid':body.uid,'created_at':now()}}, upsert=True)
+    response = {'beneficiary_id':uid('BEN'), 'verification':'SUCCESS' if scheme['min_age'] <= age <= scheme['max_age'] else 'INELIGIBLE'}
+    await db.mock_eligibility.update_one({'operation_id':body.operation_id}, {'$setOnInsert':{'operation_id':body.operation_id,'response':response,'uid':body.uid,'scheme_code':body.scheme_code,'created_at':now()}}, upsert=True)
     saved = await db.mock_eligibility.find_one({'operation_id':body.operation_id}, {'_id':0})
     return EligibilityResponse(**saved['response'])
 
@@ -110,7 +115,7 @@ def payment_xml(doc):
 async def disburse(request: Request, body: bytes = Depends(treasury_auth)):
     values = {k:v[0] for k,v in parse_qs(body.decode()).items()}
     if set(values) != {'operation_id','approval_ref','payee_ref','amount','transaction_id'}: fail(422,'INVALID_FORM','Invalid treasury form.')
-    if values['amount'] != '15000' or not values['approval_ref'].startswith('APR-'): fail(422,'INVALID_BENEFIT','Invalid approved benefit.')
+    if values['amount'] not in BENEFIT_AMOUNTS or not values['approval_ref'].startswith('APR-'): fail(422,'INVALID_BENEFIT','Invalid approved benefit.')
     fingerprint=hashlib.sha256(body).hexdigest()
     existing=await db.mock_payments.find_one({'operation_id':values['operation_id']},{'_id':0})
     if existing:

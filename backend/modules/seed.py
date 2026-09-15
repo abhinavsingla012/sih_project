@@ -7,12 +7,20 @@ ACCOUNTS = [
     ('USR-CITIZEN-2', 'rohan@demo.in', 'Rohan Shah', 'citizen', None, 'DEMO-CITIZEN-002'),
     ('USR-AUDITOR', 'auditor@demo.in', 'Vikram Joshi', 'auditor', None, None),
     ('USR-OFFICIAL', 'official@demo.in', 'Meera Kulkarni', 'official', 'eligibility', None),
+    ('USR-OFFICIAL-SJ', 'sjsa@demo.in', 'Prakash Waghmare', 'official', 'eligibility', None),
+    ('USR-OFFICIAL-AG', 'agri@demo.in', 'Sunita Jadhav', 'official', 'eligibility', None),
 ]
+OFFICERS = {
+    'USR-OFFICIAL': {'unit': 'skill', 'unit_name': 'Skill Development & Entrepreneurship', 'designation': 'Deputy Commissioner, Skill Development'},
+    'USR-OFFICIAL-SJ': {'unit': 'social_justice', 'unit_name': 'Social Justice & Special Assistance', 'designation': 'Assistant Commissioner, Social Justice'},
+    'USR-OFFICIAL-AG': {'unit': 'agriculture', 'unit_name': 'Agriculture', 'designation': 'District Superintending Agriculture Officer'},
+}
 async def seed():
     if not DEMO: return
     password_hash = bcrypt.hashpw(setting('DEMO_PASSWORD').encode(), bcrypt.gensalt()).decode()
     for id_, email, name, role, department, subject in ACCOUNTS:
         await db.users.update_one({'id': id_}, {'$setOnInsert': {'id': id_, 'email': email, 'name': name, 'role': role, 'department': department, 'subject': subject, 'person_reference': f'PERSON-{id_.replace("USR-", "")}', 'active': True, 'password_hash': password_hash}}, upsert=True)
-    await db.users.update_one({'id': 'USR-OFFICIAL'}, {'$set': {'designation': 'Deputy Commissioner, Skill Development'}})
+    for id_, fields in OFFICERS.items():
+        await db.users.update_one({'id': id_}, {'$set': fields})
     for subject, cid, dob in [('DEMO-CITIZEN-001', 'CID-9281', '2004-08-19'), ('DEMO-CITIZEN-002', 'CID-9282', '2002-03-11')]:
         await db.mock_people.update_one({'subject': subject}, {'$setOnInsert': {'subject': subject, 'citizen_id': cid, 'date_of_birth': dob, 'status': 'VERIFIED', 'created_at': now()}}, upsert=True)

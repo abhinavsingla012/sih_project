@@ -3,14 +3,14 @@ from core.database import now, uid
 DEPARTMENTS = {'registry', 'eligibility', 'treasury'}
 FIELD_RULES = {
     'registry': {'IDENTITY_VERIFICATION': {'identity.subjectReference'}},
-    'eligibility': {'SKILL_BENEFIT_ELIGIBILITY': {'person.dateOfBirth', 'identity.verificationStatus', 'person.globalReference', 'course.code', 'eligibility.status'}},
+    'eligibility': {'BENEFIT_ELIGIBILITY': {'person.dateOfBirth', 'identity.verificationStatus', 'person.globalReference', 'scheme.optionCode', 'eligibility.status'}},
     'treasury': {'BENEFIT_DISBURSEMENT': {'benefit.approvalReference', 'benefit.payeeReference', 'benefit.amount'}},
 }
 def visibility(user):
     if user.role == 'citizen': return {'owner_id': user.id}
     if user.role in ('operator', 'auditor'): return {}
     if user.role in ('official', 'service') and user.department in DEPARTMENTS:
-        return {'departments': user.department}
+        return {'departments': user.department, 'unit': user.unit} if user.unit else {'departments': user.department}
     return {'owner_id': '__denied__'}
 def authorize(user, action, app=None):
     permissions = {'create': {'citizen'}, 'operate': {'operator'}, 'inspect': {'operator', 'auditor', 'official'}, 'read': {'citizen', 'operator', 'auditor', 'official', 'service'}, 'data_access': {'service'}, 'revoke': {'citizen'}, 'review': {'official'}}

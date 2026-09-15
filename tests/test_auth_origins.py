@@ -340,7 +340,7 @@ async def test_mutation_with_trusted_origin(results: TestResults):
         # Try to create an application (mutation)
         app_data = {
             "service_code": "MH_SKILL_BENEFIT",
-            "course_code": "DATA_ANALYTICS",
+            "option_code": "DATA_ANALYTICS",
             "district": "Pune",
             "eligibility_consent": True,
             "payment_consent": True
@@ -378,7 +378,7 @@ async def test_mutation_with_untrusted_origin(results: TestResults):
         
         app_data = {
             "service_code": "MH_SKILL_BENEFIT",
-            "course_code": "DATA_ANALYTICS",
+            "option_code": "DATA_ANALYTICS",
             "district": "Pune",
             "eligibility_consent": True,
             "payment_consent": True
@@ -415,7 +415,7 @@ async def test_mutation_with_invalid_csrf(results: TestResults):
         
         app_data = {
             "service_code": "MH_SKILL_BENEFIT",
-            "course_code": "DATA_ANALYTICS",
+            "option_code": "DATA_ANALYTICS",
             "district": "Pune",
             "eligibility_consent": True,
             "payment_consent": True

@@ -6,7 +6,7 @@ from core.database import db, now, uid
 from core.errors import fail
 from modules.policy import visibility, authorize, FIELD_RULES
 from modules.models import ApplicationView
-from modules.definitions import STAGES
+from modules.definitions import STAGES, SCHEMES, DISTRICTS, stage_templates
 
 async def load(key, user=None):
     query={'$or':[{'id':key},{'transaction_id':key}]}
@@ -29,7 +29,15 @@ async def save(app, expected_version):
     if result.modified_count!=1: fail(409,'VERSION_CONFLICT','The transaction changed. Refresh and try again.')
     return app
 
+def catalogue_entry(body):
+    scheme=SCHEMES.get(body.service_code)
+    if not scheme: fail(422,'UNKNOWN_SERVICE','This service is not in the scheme catalogue.')
+    if body.option_code not in scheme['options']: fail(422,'INVALID_OPTION',f'Choose a valid {scheme["option_label"].lower()} for this scheme.')
+    if body.district not in DISTRICTS: fail(422,'INVALID_DISTRICT','Choose a Maharashtra district from the list.')
+    return scheme
+
 async def create(user, body, key, scenario='success', actor=None, review_mode='manual'):
+    scheme=catalogue_entry(body)
     fingerprint=hashlib.sha256(json.dumps({'body':body.model_dump(),'scenario':scenario,'review_mode':review_mode},sort_keys=True).encode()).hexdigest()
     old=await db.applications.find_one({'owner_id':user['id'],'idempotency_key':key},{'_id':0})
     if old:
@@ -38,7 +46,7 @@ async def create(user, body, key, scenario='success', actor=None, review_mode='m
     stamp=now(); tx=uid('TXN'); app_id=uid(f'APP-MH-{datetime.now(timezone.utc).year}')
     expiry=(datetime.now(timezone.utc)+timedelta(days=30)).isoformat()
     consents=[{'id':uid('CNS'),'recipient':dept,'purpose':purpose,'fields':sorted(fields),'state':'ACTIVE','granted_at':stamp,'expires_at':expiry,'subject':user['id'],'transaction_id':tx,'policy_version':'field-policy-v1','actor':actor or user['id']} for dept in ('eligibility','treasury') for purpose,fields in FIELD_RULES[dept].items()]
-    app={'id':app_id,'transaction_id':tx,'owner_id':user['id'],'owner_name':user['name'],'subject':user['subject'],'person_reference':user['person_reference'],'service_code':body.service_code,'course_code':body.course_code,'district':body.district,'amount':15000,'status':'SUBMITTED','created_at':stamp,'updated_at':stamp,'version':0,'workflow_version':'skill-benefit-v1','canonical_version':'1','idempotency_key':key,'fingerprint':fingerprint,'departments':['registry','eligibility','treasury'],'stages':[{**{k:d[k] for k in ('id','name','system','connector')},'state':'PENDING','operation_id':uid('OP'),'attempts':[],'external_id':None,'evidence':None,'policy':None,'review':None} for d in STAGES],'events':[],'audit':[],'consents':consents,'mappings':[],'canonical':{},'scenario':scenario,'review_mode':review_mode,'next_retry_at':None,'is_demo':True}
+    app={'id':app_id,'transaction_id':tx,'owner_id':user['id'],'owner_name':user['name'],'subject':user['subject'],'person_reference':user['person_reference'],'service_code':body.service_code,'option_code':body.option_code,'unit':scheme['unit'],'district':body.district,'amount':scheme['amount'],'status':'SUBMITTED','created_at':stamp,'updated_at':stamp,'version':0,'workflow_version':'benefit-v1','canonical_version':'1','idempotency_key':key,'fingerprint':fingerprint,'departments':['registry','eligibility','treasury'],'stages':[{**{k:d[k] for k in ('id','name','system','connector')},'state':'PENDING','operation_id':uid('OP'),'attempts':[],'external_id':None,'evidence':None,'policy':None,'review':None} for d in stage_templates(scheme)],'events':[],'audit':[],'consents':consents,'mappings':[],'canonical':{},'scenario':scenario,'review_mode':review_mode,'next_retry_at':None,'is_demo':True}
     emit(app,'APPLICATION_CREATED',actor or user['id'],payload={'result':'ACCEPTED','consent_ids':[c['id'] for c in consents]})
     try: await db.applications.insert_one(copy.deepcopy(app))
     except DuplicateKeyError:
@@ -47,6 +55,9 @@ async def create(user, body, key, scenario='success', actor=None, review_mode='m
 
 def project(app,user,full=True):
     safe=copy.deepcopy(app)
+    scheme=SCHEMES.get(safe.get('service_code'),{})
+    option=safe.get('option_code') or safe.get('course_code') or ''
+    safe.update(option_code=option,service_name=scheme.get('name',safe.get('service_code','')),option_label=scheme.get('options',{}).get(option,option.replace('_',' ').title()),department=scheme.get('department',''),unit=safe.get('unit') or scheme.get('unit',''))
     if user.role=='citizen':
         safe.update(events=[],audit=[],mappings=[],canonical={},scenario=None,review_mode=None)
         for stage in safe['stages']:

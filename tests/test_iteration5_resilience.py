@@ -111,7 +111,7 @@ def test_login_wrong_password_401():
 def test_e2e_citizen_application_completes():
     c = login("citizen@demo.in")
     r = c.post("/applications",
-               json={"course_code": "DATA_ANALYTICS", "district": "Pune",
+               json={"option_code": "DATA_ANALYTICS", "district": "Pune",
                      "eligibility_consent": True, "payment_consent": True,
                      "service_code": "MH_SKILL_BENEFIT"},
                headers={"Idempotency-Key": str(uuid.uuid4())})
@@ -189,7 +189,7 @@ def test_worker_startup_with_redis_down():
     # verify new application processes
     c = login("citizen@demo.in")
     r = c.post("/applications",
-               json={"course_code": "DATA_ANALYTICS", "district": "Pune",
+               json={"option_code": "DATA_ANALYTICS", "district": "Pune",
                      "eligibility_consent": True, "payment_consent": True,
                      "service_code": "MH_SKILL_BENEFIT"},
                headers={"Idempotency-Key": str(uuid.uuid4())})

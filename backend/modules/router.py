@@ -12,9 +12,10 @@ from modules.models import CreateApplication,DemoJourney,ApplicationView,Applica
 from modules.repository import load,save,create,project,emit
 from modules.policy import authorize,visibility,exchange_decision,FIELD_RULES
 from modules.events import publish_pending,STREAM,GROUP
-from modules.definitions import CONNECTORS,MAPPINGS,STAGES
+from modules.definitions import CONNECTORS,MAPPINGS,STAGES,SCHEMES,DISTRICTS,stage_templates
 from modules.recovery import retry
 from modules.connectors import eligibility_token,REGISTRY
+from modules.dataset import seed_dataset
 from mock_departments.router import service_principal
 
 router=APIRouter(prefix='/api',tags=['Interoperability'])
@@ -27,7 +28,7 @@ def idempotency(key):
 
 @router.get('/services')
 async def services(user:Principal=Depends(principal)):
-    return {'items':[{'code':'MH_SKILL_BENEFIT','version':'1','name':'Skill development benefit','amount':15000,'currency':'INR','description':'Hypothetical training benefit for eligible citizens aged 18–35.','courses':['DATA_ANALYTICS','ELECTRIC_VEHICLES','WEB_DEVELOPMENT'],'districts':['Pune','Mumbai','Nagpur','Nashik','Thane'],'is_demo':True}]}
+    return {'items':[{**{k:v for k,v in s.items() if k not in ('options','min_age','max_age')},'currency':'INR','options':[{'code':c,'label':l} for c,l in s['options'].items()],'districts':DISTRICTS,'stages':[{'id':t['id'],'name':t['name'],'system':t['system']} for t in stage_templates(s)],'is_demo':True} for s in SCHEMES.values()]}
 
 @router.post('/applications',response_model=ApplicationView,status_code=201)
 async def new_application(body:CreateApplication,user:Principal=Depends(principal),key:str=Header('',alias='Idempotency-Key')):
@@ -38,9 +39,10 @@ async def new_application(body:CreateApplication,user:Principal=Depends(principa
     return project(await load(app['id'],user),user)
 
 @router.get('/applications',response_model=ApplicationList)
-async def applications(user:Principal=Depends(principal),status:str|None=None,search:str=Query('',max_length=100),cursor:str|None=None,limit:int=Query(20,ge=1,le=100),attention:bool=False):
+async def applications(user:Principal=Depends(principal),status:str|None=None,service_code:str|None=Query(None,max_length=60),search:str=Query('',max_length=100),cursor:str|None=None,limit:int=Query(20,ge=1,le=100),attention:bool=False):
     authorize(user,'read');q=visibility(user)
     if status:q={'$and':[q,{'status':status}]}
+    if service_code:q={'$and':[q,{'service_code':service_code}]}
     if attention:q={'$and':[q,{'status':{'$in':['RECONCILING','RETRY_SCHEDULED','HUMAN_INTERVENTION_REQUIRED','BLOCKED']}}]}
     if search:
         import re
@@ -111,9 +113,17 @@ async def demo_journey(body:DemoJourney,user:Principal=Depends(principal),key:st
     authorize(user,'operate')
     if not DEMO:fail(404,'NOT_FOUND','Demo controls are disabled.')
     citizen=await db.users.find_one({'id':'USR-CITIZEN'},{'_id':0})
-    app=await create(citizen,CreateApplication(course_code=body.course_code,district='Pune',eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}',body.review)
+    scheme=SCHEMES.get(body.service_code)
+    if not scheme:fail(422,'UNKNOWN_SERVICE','This service is not in the scheme catalogue.')
+    app=await create(citizen,CreateApplication(service_code=body.service_code,option_code=body.option_code or next(iter(scheme['options'])),district='Pune',eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}',body.review)
     await db.demo_scenarios.update_one({'transaction_id':app['transaction_id']},{'$setOnInsert':{'transaction_id':app['transaction_id'],'scenario':body.scenario}},upsert=True)
     await publish_pending(app['id']);return project(app,user)
+
+@router.post('/demo/dataset/reset')
+async def reset_dataset(user:Principal=Depends(principal)):
+    authorize(user,'operate')
+    if not DEMO:fail(404,'NOT_FOUND','Demo controls are disabled.')
+    return await seed_dataset(reset=True)
 
 @router.post('/demo/transactions/{key}/scenario',response_model=ApplicationView)
 async def scenario(key:str,body:ScenarioRequest,user:Principal=Depends(principal)):
@@ -140,7 +150,7 @@ async def data_access(key:str,body:DataAccessRequest,user:Principal=Depends(serv
     else:fail(503,'AUDIT_UNAVAILABLE','The decision could not be durably recorded; access denied.')
     await publish_pending(app['id'])
     if decision['decision']=='DENY':fail(403,'POLICY_DENIED',decision['reason'],decision=decision)
-    values={'eligibility.status':app['canonical'].get('eligibility',{}).get('status'),'person.globalReference':app['person_reference'],'identity.verificationStatus':app['canonical'].get('identity',{}).get('verificationStatus'),'course.code':app['course_code']}
+    values={'eligibility.status':app['canonical'].get('eligibility',{}).get('status'),'person.globalReference':app['person_reference'],'identity.verificationStatus':app['canonical'].get('identity',{}).get('verificationStatus'),'scheme.optionCode':app.get('option_code')}
     # DOB is not retained by the fabric; retrieve only after successful authorization.
     if 'person.dateOfBirth' in body.fields:
         from modules.connectors import registry_source
@@ -152,7 +162,7 @@ async def probe(key:str,user:Principal=Depends(principal)):
     authorize(user,'operate');app=await load(key,user)
     if not DEMO:fail(404,'NOT_FOUND','Demo controls are disabled.')
     async with httpx.AsyncClient(base_url=setting('MOCK_BASE_URL'),timeout=10) as client:
-        r=await client.post(f'/api/transactions/{app["transaction_id"]}/data-access',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'fields':['citizen.bankAccount'],'purpose':'SKILL_BENEFIT_ELIGIBILITY'})
+        r=await client.post(f'/api/transactions/{app["transaction_id"]}/data-access',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'fields':['citizen.bankAccount'],'purpose':'BENEFIT_ELIGIBILITY'})
     return {'http_status':r.status_code,'response':r.json(),'requested_field':'citizen.bankAccount','requesting_department':'eligibility'}
 
 @router.get('/connectors')
@@ -196,7 +206,8 @@ async def overview(user:Principal=Depends(principal)):
     except Exception:redis_ok=False;heartbeat=None;pending={'pending':None};stream_length=None
     completed=sum(d['status']=='COMPLETED' for d in docs)
     awaiting_review=sum(d['status']=='UNDER_REVIEW' for d in docs)
-    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING','UNDER_REVIEW') for d in docs),'awaiting_review':awaiting_review,'attention':len(attention),'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
+    by_scheme=[{'code':s['code'],'name':s['name'],'department':s['department'],'amount':s['amount'],'total':len(rows),'completed':sum(r['status']=='COMPLETED' for r in rows),'awaiting_review':sum(r['status']=='UNDER_REVIEW' for r in rows),'rejected':sum(r['status']=='REJECTED' for r in rows),'attention':sum(r['status'] in ('RECONCILING','RETRY_SCHEDULED','HUMAN_INTERVENTION_REQUIRED','BLOCKED') for r in rows),'disbursed':sum(r['amount'] for r in rows if r['status']=='COMPLETED')} for s in SCHEMES.values() for rows in [[d for d in docs if d.get('service_code')==s['code']]]]
+    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING','UNDER_REVIEW') for d in docs),'awaiting_review':awaiting_review,'attention':len(attention),'by_scheme':by_scheme,'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
 
 @router.get('/notifications')
 async def notifications(user:Principal=Depends(principal)):

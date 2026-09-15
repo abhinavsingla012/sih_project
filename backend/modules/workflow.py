@@ -23,7 +23,7 @@ async def prepare(app,index,event):
         else:
             stage['state']='AWAITING_REVIEW'; app['status']='UNDER_REVIEW'
             stage['review']={'requested_at':now(),'mode':'manual'}
-            emit(app,'REVIEW_REQUESTED','workflow',stage['id'],{'result':'AWAITING_OFFICER','department':STAGES[index]['system']},event['id'])
+            emit(app,'REVIEW_REQUESTED','workflow',stage['id'],{'result':'AWAITING_OFFICER','department':stage['system']},event['id'])
             await save(app,version); await publish_pending(app['id']); return
     stage['state']='READY'; app['status']='PROCESSING'
     emit(app,'STAGE_REQUESTED','workflow',stage['id'],{'operation_id':stage['operation_id']},event['id'])

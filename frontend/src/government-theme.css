@@ -186,6 +186,58 @@ select:focus-visible, textarea:focus-visible {
 .review-mode-options small { display: block; font-size: 10px; line-height: 1.6; margin-top: 4px; color: #59697b; }
 .product-dialog .field-label { margin-top: 6px; color: #5b6b7e; font-size: 10px; font-weight: 600; }
 .login-roles.three { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Scheme catalogue, selector and portfolio */
+.catalogue { margin: 26px 0 8px; }
+.catalogue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.catalogue-card { display: flex; flex-direction: column; gap: 8px; background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--gov-blue); border-radius: 4px; padding: 20px 20px 18px; min-width: 0; }
+.catalogue-card.social_justice { border-top-color: #7a3e9d; }
+.catalogue-card.agriculture { border-top-color: #23753c; }
+.catalogue-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.catalogue-card .service-symbol { width: 46px; height: 46px; border-radius: 4px; background: #edf2f8; color: var(--gov-blue); }
+.catalogue-card.social_justice .service-symbol { background: #f3ecf8; color: #6a2f8c; }
+.catalogue-card.agriculture .service-symbol { background: #edf6ef; color: #23753c; }
+.catalogue-amount { font-size: 20px; font-weight: 700; color: var(--gov-blue); }
+.catalogue-card .eyebrow { margin: 0; font-size: 9px; }
+.catalogue-card h3 { font-size: 15px; line-height: 1.4; }
+.catalogue-card p { font-size: 12px; color: #4c5f76; line-height: 1.7; }
+.catalogue-card small { font-size: 11px; color: #59697b; line-height: 1.6; flex: 1; }
+.catalogue-card a[role=button], .catalogue-card > a { font-size: 12px; margin-top: 8px; border-color: #c9d6e6; color: var(--gov-blue); width: 100%; }
+.scheme-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.scheme-selector button { display: flex; align-items: flex-start; gap: 10px; text-align: left; border: 1px solid #d4deea; border-radius: 4px; padding: 13px 12px; background: #fff; color: #4c6078; min-width: 0; }
+.scheme-selector button > svg { flex-shrink: 0; margin-top: 2px; }
+.scheme-selector button > svg:last-child { margin-left: auto; color: var(--gov-blue); }
+.scheme-selector button span { min-width: 0; }
+.scheme-selector button strong { display: block; font-size: 12px; line-height: 1.5; }
+.scheme-selector button small { display: block; font-size: 10px; color: #59697b; margin-top: 4px; line-height: 1.5; }
+.scheme-selector button.selected { border-color: var(--gov-blue); background: #edf3fb; color: var(--gov-blue); box-shadow: 0 0 0 1px var(--gov-blue); }
+.summary-stage em { font-style: normal; color: #59697b; }
+.dialog-select { width: 100%; border: 1px solid #b9c6d5; border-radius: 3px; padding: 10px 12px; font-size: 13px; color: var(--ink); background: #fff; }
+.scheme-table { background: #fff; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.scheme-table-heading, .scheme-row { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(90px, .7fr)) minmax(120px, 1fr); gap: 16px; align-items: center; padding: 15px 20px; }
+.scheme-table-heading { background: #edf2f8; color: #3e5571; font-size: 10px; font-weight: 600; }
+.scheme-row { border-top: 1px solid #eef1f4; font-size: 14px; color: var(--ink); }
+.scheme-row:hover { background: #f6f9fc; }
+.scheme-cell { min-width: 0; }
+.scheme-cell strong { display: block; font-size: 13px; color: var(--gov-blue); }
+.scheme-cell small { display: block; font-size: 11px; color: #59697b; margin-top: 4px; }
+.scheme-row > span.accent { color: #1f4b86; font-weight: 700; }
+.scheme-row > span.warn { color: #8d4c0c; font-weight: 700; }
+.scheme-row > span.mono { font-size: 12px; }
+@media (max-width: 1000px) {
+  .catalogue-grid { grid-template-columns: 1fr; }
+  .scheme-selector { grid-template-columns: 1fr; }
+  .scheme-table-heading { display: none; }
+  .scheme-row { grid-template-columns: 1fr 1fr 1fr; gap: 10px 14px; padding: 16px; }
+  .scheme-cell { grid-column: 1 / -1; }
+  .scheme-row > span { font-size: 13px; }
+  .scheme-row > span::before { display: block; font-size: 9px; color: #59697b; font-weight: 600; margin-bottom: 3px; }
+  .scheme-row > span:nth-child(2)::before { content: 'APPLICATIONS'; }
+  .scheme-row > span:nth-child(3)::before { content: 'COMPLETED'; }
+  .scheme-row > span:nth-child(4)::before { content: 'AWAITING OFFICER'; }
+  .scheme-row > span:nth-child(5)::before { content: 'ATTENTION'; }
+  .scheme-row > span:nth-child(6)::before { content: 'DISBURSED'; }
+}
 @media (max-width: 1000px) {
   .review-table .review-waiting, .review-table .review-decision { display: none; }
   .login-roles.three { grid-template-columns: 1fr; }

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.config import TRUSTED_ORIGINS
 from core.database import client,db,bus,indexes,uid
 from modules.seed import seed
+from modules.dataset import seed_dataset
 from modules.auth import router as auth_router
 from modules.router import router as domain_router
 from mock_departments.router import router as mock_router
@@ -15,6 +16,8 @@ from modules.events import ensure_group
 @asynccontextmanager
 async def lifespan(app):
     await indexes();await seed()
+    try:await seed_dataset()
+    except Exception:logging.exception('Demo history could not be seeded')
     try:await ensure_group()
     except Exception:logging.warning('Redis unavailable at startup; outbox remains durable')
     yield

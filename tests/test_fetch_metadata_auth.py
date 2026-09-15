@@ -320,7 +320,7 @@ async def test_csrf_and_origin_on_mutation(results: TestResults):
         # Test 1: Valid CSRF + trusted origin should succeed
         app_data = {
             "service_code": "MH_SKILL_BENEFIT",
-            "course_code": "DATA_ANALYTICS",
+            "option_code": "DATA_ANALYTICS",
             "district": "Pune",
             "eligibility_consent": True,
             "payment_consent": True

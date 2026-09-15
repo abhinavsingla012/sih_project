@@ -49,10 +49,10 @@ class EligibilityAdapter(ConnectorAdapter):
     department='eligibility'
     async def execute(self,app,stage):
         source=await registry_source(app)
-        native=EligibilityResponse.model_validate((await request('POST','/api/mock/eligibility/check',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'operation_id':stage['operation_id'],'uid':app['person_reference'],'birth_date':datetime.strptime(source.dob,'%Y-%m-%d').strftime('%d/%m/%Y'),'verification':source.status,'course_code':app['course_code']})).json())
+        native=EligibilityResponse.model_validate((await request('POST','/api/mock/eligibility/check',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'operation_id':stage['operation_id'],'uid':app['person_reference'],'birth_date':datetime.strptime(source.dob,'%Y-%m-%d').strftime('%d/%m/%Y'),'verification':source.status,'scheme_code':app['service_code'],'option_code':app['option_code']})).json())
         status={'SUCCESS':'ELIGIBLE','INELIGIBLE':'INELIGIBLE'}[native.verification]
-        canonical={'eligibility':{'status':status,'beneficiaryReference':native.beneficiary_id}}
-        return CanonicalResult(external_id=native.beneficiary_id,entity_type='beneficiary',status=status,canonical=canonical,evidence=evidence('eligibility-v1',native.model_dump(),canonical,[{'source':'verification','target':'eligibility.status','transform':'SUCCESS → ELIGIBLE'},{'source':'beneficiary_id','target':'eligibility.beneficiaryReference','transform':'reference'},{'source':'person.dateOfBirth','target':'birth_date','transform':'ISO → DD/MM/YYYY; transient'}]))
+        canonical={'eligibility':{'status':status,'beneficiaryReference':native.beneficiary_id},'scheme':{'code':app['service_code'],'optionCode':app['option_code']}}
+        return CanonicalResult(external_id=native.beneficiary_id,entity_type='beneficiary',status=status,canonical=canonical,evidence=evidence('eligibility-v1',native.model_dump(),canonical,[{'source':'verification','target':'eligibility.status','transform':'SUCCESS → ELIGIBLE'},{'source':'beneficiary_id','target':'eligibility.beneficiaryReference','transform':'reference'},{'source':'person.dateOfBirth','target':'birth_date','transform':'ISO → DD/MM/YYYY; transient'},{'source':'scheme_code + option_code','target':'scheme.optionCode','transform':'catalogue lookup'}]))
 
 class ApprovalAdapter(ConnectorAdapter):
     department='eligibility'

@@ -2,14 +2,15 @@ from typing import Literal, Any
 from pydantic import BaseModel, Field
 from modules.auth import StrictModel
 class CreateApplication(StrictModel):
-    service_code: Literal['MH_SKILL_BENEFIT'] = 'MH_SKILL_BENEFIT'
-    course_code: Literal['DATA_ANALYTICS', 'ELECTRIC_VEHICLES', 'WEB_DEVELOPMENT']
-    district: Literal['Pune', 'Mumbai', 'Nagpur', 'Nashik', 'Thane']
+    service_code: str = Field(min_length=3, max_length=60)
+    option_code: str = Field(min_length=2, max_length=40)
+    district: str = Field(min_length=2, max_length=40)
     eligibility_consent: Literal[True]
     payment_consent: Literal[True]
 class DemoJourney(StrictModel):
     scenario: Literal['success', 'timeout_after_commit', 'treasury_unavailable'] = 'success'
-    course_code: Literal['DATA_ANALYTICS', 'ELECTRIC_VEHICLES', 'WEB_DEVELOPMENT'] = 'DATA_ANALYTICS'
+    service_code: str = Field(default='MH_SKILL_BENEFIT', min_length=3, max_length=60)
+    option_code: str | None = Field(default=None, min_length=2, max_length=40)
     review: Literal['manual', 'auto'] = 'auto'
 class ReviewDecision(StrictModel):
     decision: Literal['SANCTION', 'REJECT']
@@ -46,7 +47,11 @@ class ApplicationView(BaseModel):
     person_reference: str
     owner_name: str
     service_code: str
-    course_code: str
+    service_name: str = ''
+    option_code: str = ''
+    option_label: str = ''
+    department: str = ''
+    unit: str = ''
     district: str
     status: str
     created_at: str

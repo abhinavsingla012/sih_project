@@ -248,7 +248,7 @@ async def create_demo_journey(session: TestSession, scenario: str = "success", c
     idempotency_key = str(uuid.uuid4())
     response = await session.post(
         "/demo/journeys",
-        json={"scenario": scenario, "course_code": course},
+        json={"scenario": scenario, "option_code": course},
         headers={"Idempotency-Key": idempotency_key}
     )
     
@@ -686,7 +686,7 @@ async def test_authorization_rbac(results: TestResults):
             "/applications",
             json={
                 "service_code": "MH_SKILL_BENEFIT",
-                "course_code": "DATA_ANALYTICS",
+                "option_code": "DATA_ANALYTICS",
                 "district": "Pune",
                 "eligibility_consent": True,
                 "payment_consent": True
@@ -749,7 +749,7 @@ async def test_authorization_rbac(results: TestResults):
             "/applications",
             json={
                 "service_code": "MH_SKILL_BENEFIT",
-                "course_code": "DATA_ANALYTICS",
+                "option_code": "DATA_ANALYTICS",
                 "district": "Pune",
                 "eligibility_consent": True,
                 "payment_consent": True
@@ -819,7 +819,7 @@ async def test_csrf_and_origin(results: TestResults):
         cookies = {"samanvay_session": operator.session_cookie}
         response = await operator.client.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "DATA_ANALYTICS"},
+            json={"scenario": "success", "option_code": "DATA_ANALYTICS"},
             cookies=cookies,
             headers={
                 "Idempotency-Key": str(uuid.uuid4()),
@@ -839,7 +839,7 @@ async def test_csrf_and_origin(results: TestResults):
         # Test 2: Wrong origin should fail
         response = await operator.client.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "DATA_ANALYTICS"},
+            json={"scenario": "success", "option_code": "DATA_ANALYTICS"},
             cookies=cookies,
             headers={
                 "X-CSRF-Token": operator.csrf_token,
@@ -860,7 +860,7 @@ async def test_csrf_and_origin(results: TestResults):
         # Test 3: Correct CSRF and origin should work
         response = await operator.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "DATA_ANALYTICS"},
+            json={"scenario": "success", "option_code": "DATA_ANALYTICS"},
             headers={"Idempotency-Key": str(uuid.uuid4())}
         )
         
@@ -930,7 +930,7 @@ async def test_consent_revocation(results: TestResults):
             "/applications",
             json={
                 "service_code": "MH_SKILL_BENEFIT",
-                "course_code": "WEB_DEVELOPMENT",
+                "option_code": "WEB_DEVELOPMENT",
                 "district": "Mumbai",
                 "eligibility_consent": True,
                 "payment_consent": True
@@ -1072,7 +1072,7 @@ async def test_event_resilience(results: TestResults):
         # Create application while worker is down
         response = await operator.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "ELECTRIC_VEHICLES"},
+            json={"scenario": "success", "option_code": "ELECTRIC_VEHICLES"},
             headers={"Idempotency-Key": str(uuid.uuid4())}
         )
         
@@ -1215,7 +1215,7 @@ async def test_idempotency(results: TestResults):
         
         response1 = await operator.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "DATA_ANALYTICS"},
+            json={"scenario": "success", "option_code": "DATA_ANALYTICS"},
             headers={"Idempotency-Key": idem_key}
         )
         
@@ -1229,7 +1229,7 @@ async def test_idempotency(results: TestResults):
         # Duplicate request with same key
         response2 = await operator.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "DATA_ANALYTICS"},
+            json={"scenario": "success", "option_code": "DATA_ANALYTICS"},
             headers={"Idempotency-Key": idem_key}
         )
         
@@ -1248,7 +1248,7 @@ async def test_idempotency(results: TestResults):
         # Test 2: Changed body with same key should conflict
         response3 = await operator.post(
             "/demo/journeys",
-            json={"scenario": "success", "course_code": "WEB_DEVELOPMENT"},  # Different course
+            json={"scenario": "success", "option_code": "WEB_DEVELOPMENT"},  # Different course
             headers={"Idempotency-Key": idem_key}
         )
         
