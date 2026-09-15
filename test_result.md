@@ -144,6 +144,9 @@ backend:
       - agent: "testing"
         working: true
         comment: "✅ ALL TESTS PASSED. Runtime healthy: API responding, MongoDB connected, Redis operational, event consumer processing (heartbeat active). setup_local.py runs idempotently without errors, preserves credentials. All services (backend, samanvay-redis, samanvay-events) running correctly. APP_ORIGIN matches frontend URL (https://txn-orchestrate.preview.emergentagent.com)."
+      - agent: "main"
+        working: "NA"
+        comment: "Root cause of user-reported 503 login + stuck SUBMITTED app: on pod resume the fresh image lacks redis-server when supervisor starts samanvay-redis (execvp FileNotFoundError), supervisor gave up (FATAL/STOPPED), event worker crashed at initial ensure_group. Fixes: run_redis.py now polls for the binary, installs redis-server non-interactively if absent, stops any stray postinst instance and execs via absolute path; event_worker.py retries ensure_group/publish_pending at startup instead of crashing; samanvay-supervisor.conf adds startsecs/startretries=200; restore_runtime.py runs setup_local and starts services. Applied and restarted: all services RUNNING, redis PONG, public login 200, new citizen application reached COMPLETED (4/4 stages) in <12s. Previously stuck APP-MH-2026-E4ECB5BAC03C was picked up during backend restart, hit CONNECTION_FAILED, now RETRY_SCHEDULED with next_retry_at ~15:24Z (expected to self-recover via scheduled maintenance)."
   - task: "Core interoperability, reconciliation and authorization"
     implemented: true
     working: true
@@ -172,6 +175,9 @@ backend:
       - agent: "testing"
         working: false
         comment: "Maintenance endpoint authentication tested: correctly rejects missing/wrong credentials (401). Cannot test with actual WEBHOOK_CRON_SECRET (in .env.local). Known issue: cron dispatcher credential mismatch remains unresolved."
+      - agent: "main"
+        working: "NA"
+        comment: "setup_local.py now writes WEBHOOK_CRON_SECRET to backend/.env (the file the platform dispatcher /app/.emergent/cron/dispatch_webhook.sh reads) and removes it from .env.local; other secrets unchanged. Verified by running the real dispatcher script against the current public URL: http=202 (was 401 in /var/log/webhook-cron.log), maintenance_receipts shows queued:true. Never print the secret; test via the dispatcher script or by reading the header value into a shell variable only."
 frontend:
   - task: "Simple government-inspired UI"
     implemented: true
@@ -233,7 +239,9 @@ metadata:
   test_sequence: 4
   run_ui: true
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Runtime restoration and idempotent setup"
+    - "Scheduled recovery authentication"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -248,5 +256,7 @@ agent_communication:
     message: "✅ ORIGIN AUTH FIX VERIFIED - ALL 27 REGRESSION TESTS PASSED. Created /app/tests/test_auth_origins.py with explicit Origin headers to test browser login scenario. USER-REPORTED BUG FIXED: Login through public URL now works (200 with session). Backend correctly accepts both public and internal cluster origins. Comprehensive testing: origin validation (trusted accepted, untrusted rejected 403), CSRF validation (valid+trusted succeeds, valid+untrusted rejected, invalid rejected), session management (login/logout/revocation), cookie security (Secure, HttpOnly, correct paths), CORS (trusted allowed, untrusted rejected, no wildcards). Direct ASGI tests confirm backend code correctly validates origins when bypassing proxy. Proxy behavior documented: K8s ingress rewrites *.preview.emergentagent.com origins to internal domain (infrastructure behavior). Test results: /app/tests/test_auth_origins_results.txt. Backend auth fix complete and verified. Frontend testing awaits user permission."
   - agent: "testing"
     message: "✅ TRUTHFUL FETCH METADATA RETEST COMPLETE - ALL 17 TESTS PASSED. Previous test_auth_origins.py had FALSE PASSES: lines 199-232 counted proxy-accepted hostile neighbor/suffix origins as PASS (infrastructure behavior, not security verification), lines 640/702 counted ASGI 503 as PASS (rate limit, not origin validation). Created new truthful test suite /app/tests/test_fetch_metadata_auth.py per review request. FETCH METADATA DEFENSE WORKING: Browser same-origin (Sec-Fetch-Site: same-origin) succeeds. Browser same-site (Sec-Fetch-Site: same-site) REJECTED even with forged public origin. Browser cross-site (Sec-Fetch-Site: cross-site) REJECTED even with forged internal origin. Legacy clients without Fetch Metadata: trusted origin succeeds, untrusted rejected. Literal 'Origin: null' rejected (403), no Origin header succeeds. Invalid password (401), /me working, logout revokes, cookies correct. CSRF+Origin validation working on mutations. KNOWN PROXY LIMITATION EXPLICITLY DOCUMENTED (NOT security pass): K8s ingress rewrites *.preview.emergentagent.com to internal domain before backend sees it. Fetch Metadata mitigates for modern browsers. Legacy clients without Fetch Metadata remain vulnerable to proxy rewriting (infrastructure limitation, not backend issue). Test results: /app/tests/test_fetch_metadata_results.txt. No application code changes made (READ ONLY per review request). Truthful test reporting complete. Browser verification still pending user permission."
+  - agent: "testing"
+    message: "BACKEND ONLY (fork iteration 5). Redis/event-worker startup made self-healing and the cron secret moved to backend/.env. Verify: services stay RUNNING; login 200 (no 503); new application completes 4 stages; kill/restart samanvay-redis and confirm worker reconnects (no FATAL) and continues; run /app/.emergent/cron/dispatch_webhook.sh with ENDPOINT_URL_B64 of the current public /api/internal/maintenance/recover and expect 202 + processed MAINTENANCE_REQUESTED; confirm RETRY_SCHEDULED app APP-MH-2026-E4ECB5BAC03C recovers once due; regression-run /app/tests/backend_test.py. Do not print secrets."
   - agent: "testing"
     message: "✅ FRONTEND UI + LOGIN BROWSER TESTING COMPLETE - ALL TESTS PASSED. User explicitly approved testing at https://txn-orchestrate.preview.emergentagent.com/login. CRITICAL USER-REPORTED BUG FIXED: 'Request origin is not permitted' error NO LONGER APPEARS. Desktop (1920x800) comprehensive tests: (1) Operator login successful, /operations loaded with 4 metrics, no origin error. (2) Session persistence: reload retained session. (3) Logout/relogin working. (4) Invalid password: proper error displayed, then successful login. (5) All navigation working: transactions, connectors, mappings, exceptions, policy, audit, health. (6) Transaction inspection: stages (identity/eligibility/approval/disbursement), tabs (journey/events/audit/consent), policy probe returned 403 ACCESS DENIED as expected, demo dialog and recovery dialog functional. (7) Citizen flow: login, /citizen, new service form with consent checkboxes, application submission successful, notifications page, logout. (8) No horizontal overflow. Mobile (390x844): Login (operator/citizen), mobile nav toggle, transaction view, citizen form all working. No horizontal overflow. Theme verified: Gov Blue #173e70, Saffron #e88a27, clean simple design as requested. Screenshots: 15 captured. Network: 5 expected 401s (not issues). CSRF headers working. Backend TRUSTED_ORIGINS fix verified through real browser clicks. Login bug RESOLVED."

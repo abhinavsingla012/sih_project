@@ -23,7 +23,11 @@ async def process(message_id,fields):
         logging.exception('Consumer failure; event retained in pending entries')
 
 async def main():
-    await ensure_group();await publish_pending()
+    while True:
+        try: await ensure_group();await publish_pending();break
+        except RedisError:
+            logging.warning('Redis unavailable at startup; consumer waiting')
+            await asyncio.sleep(2)
     while True:
         try:
             await bus.set('samanvay:consumer:heartbeat',now(),ex=20)
