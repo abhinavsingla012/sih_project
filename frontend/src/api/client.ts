@@ -5,5 +5,5 @@ api.interceptors.request.use(config => {
   if (token) config.headers['X-CSRF-Token'] = decodeURIComponent(token);
   return config;
 });
-export const errorMessage = (error: any) => error?.response?.data?.error?.message || 'Something went wrong. Please try again.';
+export const errorMessage = (error: any) => error?.response?.data?.error?.message || error?.userMessage || 'Something went wrong. Please try again.';
 export const get = async (path: string) => (await api.get(path)).data;

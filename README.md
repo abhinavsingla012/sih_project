@@ -325,7 +325,7 @@ to the unified transaction view, whose **Correlation** panel lists every externa
 | Layer | Implementation |
 | --- | --- |
 | Authentication | Simulated local identity adapter: bcrypt password hashes, HS256 JWT bound to a server-side session (`sid`) that can be revoked; lifetime set by `SESSION_HOURS` (default 12 h — a full demo day); the JWT `exp` and cookie `max_age` derive from the same value |
-| Session transport | `samanvay_session` cookie: `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/api` |
+| Session transport | `samanvay_session` cookie: `Secure`, `HttpOnly`, `SameSite=None` (so the app also works when embedded in a preview/portal frame), `Path=/api` |
 | CSRF | Double-submit: `samanvay_csrf` cookie (readable) must be echoed in `X-CSRF-Token`; hash stored with the session |
 | Origin control | Exact configured allow-list (`APP_ORIGIN`, `TRUSTED_ORIGINS`), no wildcards; Fetch-Metadata guard rejects `Sec-Fetch-Site: same-site/cross-site` login attempts even when a proxy rewrites `Origin` |
 | Rate limiting | Redis counters: 30 login attempts / minute, 120 mutations / minute per identity; **fails closed** on login if Redis is down (`503 AUTH_UNAVAILABLE`) |
@@ -377,6 +377,9 @@ to the unified transaction view, whose **Correlation** panel lists every externa
   still active; wait a few seconds and retry.
 * Login shows *Sign-in protection is temporarily unavailable* → Redis is down (rate limiter fails closed) —
   same fix as above.
+* Sign-in immediately bounces back to the login page, or says *"did not keep the sign-in cookie"* → the browser
+  is blocking cookies for the embedded preview frame. Open the app in its own tab (there is an
+  **Open in a new tab** link in the message) — always present the demo from a top-level tab.
 
 **Questions the jury usually asks**
 

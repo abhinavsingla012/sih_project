@@ -66,9 +66,11 @@ async def login(body: Login, request: Request, response: Response):
     user = await MockIdentityAdapter().authenticate_user(body.email, body.password)
     sid, csrf = uid('SESSION'), secrets.token_urlsafe(32)
     await db.sessions.insert_one({'id': sid, 'user_id': user['id'], 'revoked': False, 'csrf_hash': hashlib.sha256(csrf.encode()).hexdigest(), 'created_at': now()})
+    # SameSite=None so the session survives when the app is embedded in a preview/portal frame;
+    # cross-site abuse is blocked by the exact Origin allow-list, Fetch Metadata guard and session-bound CSRF token.
     token = jwt.encode({'sub': user['id'], 'sid': sid, 'aud': 'samanvay', 'iss': 'samanvay-demo', 'exp': datetime.now(timezone.utc) + timedelta(seconds=SESSION_SECONDS)}, setting('JWT_SECRET'), algorithm='HS256')
-    response.set_cookie('samanvay_session', token, secure=True, httponly=True, samesite='lax', max_age=SESSION_SECONDS, path='/api')
-    response.set_cookie('samanvay_csrf', csrf, secure=True, httponly=False, samesite='lax', max_age=SESSION_SECONDS, path='/')
+    response.set_cookie('samanvay_session', token, secure=True, httponly=True, samesite='none', max_age=SESSION_SECONDS, path='/api')
+    response.set_cookie('samanvay_csrf', csrf, secure=True, httponly=False, samesite='none', max_age=SESSION_SECONDS, path='/')
     return Principal(**user)
 @router.get('/me', response_model=Principal)
 async def me(user: Principal = Depends(principal)):
@@ -76,5 +78,5 @@ async def me(user: Principal = Depends(principal)):
 @router.post('/logout', status_code=204)
 async def logout(request: Request, response: Response, user: Principal = Depends(principal)):
     await db.sessions.update_one({'id': request.state.session_id}, {'$set': {'revoked': True}})
-    response.delete_cookie('samanvay_session', path='/api', secure=True, httponly=True, samesite='lax')
-    response.delete_cookie('samanvay_csrf', path='/', secure=True, samesite='lax')
+    response.delete_cookie('samanvay_session', path='/api', secure=True, httponly=True, samesite='none')
+    response.delete_cookie('samanvay_csrf', path='/', secure=True, samesite='none')

@@ -21,7 +21,13 @@ export function AuthProvider({children}: {children:React.ReactNode}) {
     });
     return () => api.interceptors.response.eject(id);
   }, [queries]);
-  const login = async (email:string,password:string) => {const {data} = await api.post('/auth/login',{email,password}); queries.clear(); setUser(data); return data;};
+  const login = async (email:string,password:string) => {
+    const {data} = await api.post('/auth/login',{email,password});
+    // Confirm the browser actually kept the session cookie (embedded frames with third-party cookies blocked silently drop it).
+    try { await api.get('/auth/me'); }
+    catch (e:any) { if (e?.response?.status === 401) throw Object.assign(new Error('COOKIE_BLOCKED'), {code:'COOKIE_BLOCKED', userMessage:'Your browser did not keep the sign-in cookie in this embedded view. Open the app in a new tab and sign in there.'}); }
+    queries.clear(); setUser(data); return data;
+  };
   const logout = async () => {try {await api.post('/auth/logout');} finally {queries.clear(); setUser(null);}};
   return <AuthContext.Provider value={{user, loading, login, logout}}>{children}</AuthContext.Provider>;
 }
