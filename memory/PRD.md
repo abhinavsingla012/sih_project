@@ -38,6 +38,9 @@ Verified by backend testing agent (iteration_5: 14/14 new resilience tests + 74/
 ## 2026-09-15 — Expired-session handling (DONE, tested)
 User saw "services may be temporarily unavailable". Root cause: 4h session JWT expired while the tab stayed open; every API call returned 401 but the SPA kept its in-memory user and showed the generic ErrorState / hung on Loading. Fix (frontend only): AuthProvider axios interceptor on 401 (except /auth/login) clears cache + user → Guard redirects to /login with toast "Your session has expired. Please sign in again."; QueryClient no longer retries 4xx; ErrorState shows the real API message or HTTP status. Frontend testing agent iteration_6: 8/8 scenarios passed (share-link landing, expiry inside open tab for operator and citizen, server-side revocation, specific 503/500 messages, logout/invalid password/deep-link regressions, desktop + mobile).
 
+## 2026-09-15 — 12-hour demo sessions (DONE, tested)
+User chose 12 h for all roles. `SESSION_HOURS` (default 12, set by setup_local.py in .env.local, validated 0–168 h at startup) now drives both the JWT `exp` and both cookie `max_age` values in backend/modules/auth.py so they cannot drift. Verified: login sets `Max-Age=43200`, decoded JWT lifetime 12.0 h; auth regression suite 17/17 passed. README security table, env list and demo pre-checks updated.
+
 ## Backlog
 - P2: Verify timeout-after-commit recovery via the scheduled maintenance path creates exactly one treasury payment (manual retry path already verified).
 - P2: Verify the policy probe calls the real service data-access endpoint and yields an audited 403 (browser flow verified; backend contract test pending).

@@ -21,6 +21,7 @@ defaults = {
     'STREAM_NAME': 'samanvay:events',
     'STREAM_GROUP': 'samanvay-workflows',
     'CONNECTOR_TIMEOUT': '3',
+    'SESSION_HOURS': '12',
 }
 for key in ('REDIS_URL', 'MOCK_BASE_URL'):
     if not values.get(key) and not protected.get(key) and not os.environ.get(key):

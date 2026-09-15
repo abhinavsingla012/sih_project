@@ -324,7 +324,7 @@ to the unified transaction view, whose **Correlation** panel lists every externa
 
 | Layer | Implementation |
 | --- | --- |
-| Authentication | Simulated local identity adapter: bcrypt password hashes, HS256 JWT bound to a server-side session (`sid`) that can be revoked; 4 h expiry |
+| Authentication | Simulated local identity adapter: bcrypt password hashes, HS256 JWT bound to a server-side session (`sid`) that can be revoked; lifetime set by `SESSION_HOURS` (default 12 h — a full demo day); the JWT `exp` and cookie `max_age` derive from the same value |
 | Session transport | `samanvay_session` cookie: `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/api` |
 | CSRF | Double-submit: `samanvay_csrf` cookie (readable) must be echoed in `X-CSRF-Token`; hash stored with the session |
 | Origin control | Exact configured allow-list (`APP_ORIGIN`, `TRUSTED_ORIGINS`), no wildcards; Fetch-Metadata guard rejects `Sec-Fetch-Site: same-site/cross-site` login attempts even when a proxy rewrites `Origin` |
@@ -345,7 +345,8 @@ to the unified transaction view, whose **Correlation** panel lists every externa
 2. Sign in as **operator** (`operator@demo.in`) in window A and as **citizen** (`citizen@demo.in`) in window B.
    All demo passwords are `Demo@2026!`.
 3. In window A go to **System health** and confirm Redis, MongoDB and the event consumer show *HEALTHY*
-   with a recent heartbeat.
+   with a recent heartbeat. Sessions last 12 hours by default (`SESSION_HOURS`), so a morning sign-in covers
+   the whole demo day; if a session ever expires you are simply returned to the sign-in page.
 
 > Speak the boundary out loud at the start: *"The departments you will see are simulated inside this
 > repository. Everything between them — the HTTP calls, the different protocols, the events, the database,
@@ -414,7 +415,7 @@ uvicorn server:app --host 0.0.0.0 --port 8001 # API + simulated departments
 `backend/.env` (protected): `MONGO_URL`, `DB_NAME`, `WEBHOOK_CRON_SECRET`.
 `backend/.env.local` (generated): `JWT_SECRET`, `REGISTRY_KEY`, `ELIGIBILITY_SECRET`, `TREASURY_SECRET`,
 `APP_ORIGIN`, `TRUSTED_ORIGINS`, `REDIS_URL`, `MOCK_BASE_URL`, `STREAM_NAME`, `STREAM_GROUP`,
-`CONNECTOR_TIMEOUT` (3 s), `DEMO_MODE`, `DEMO_PASSWORD`.
+`CONNECTOR_TIMEOUT` (3 s), `SESSION_HOURS` (12), `DEMO_MODE`, `DEMO_PASSWORD`.
 
 On the hosted preview these three processes are supervised; `python scripts/restore_runtime.py` re-installs
 Redis (if the pod image lost it), re-runs `setup_local.py`, installs the supervisor programs and starts them.

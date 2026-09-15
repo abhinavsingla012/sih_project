@@ -10,6 +10,10 @@ from core.config import setting, TRUSTED_ORIGINS
 from core.database import db, uid, now
 from core.errors import fail
 router = APIRouter(prefix='/api/auth', tags=['Identity'])
+# One configured lifetime drives both the JWT exp claim and the cookie max_age so they can never drift apart.
+SESSION_SECONDS = int(float(setting('SESSION_HOURS')) * 3600)
+if not 1 <= SESSION_SECONDS <= 7 * 24 * 3600:
+    raise RuntimeError('SESSION_HOURS must be between 0.0003 and 168 hours.')
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
 class Login(StrictModel):
@@ -62,9 +66,9 @@ async def login(body: Login, request: Request, response: Response):
     user = await MockIdentityAdapter().authenticate_user(body.email, body.password)
     sid, csrf = uid('SESSION'), secrets.token_urlsafe(32)
     await db.sessions.insert_one({'id': sid, 'user_id': user['id'], 'revoked': False, 'csrf_hash': hashlib.sha256(csrf.encode()).hexdigest(), 'created_at': now()})
-    token = jwt.encode({'sub': user['id'], 'sid': sid, 'aud': 'samanvay', 'iss': 'samanvay-demo', 'exp': datetime.now(timezone.utc) + timedelta(hours=4)}, setting('JWT_SECRET'), algorithm='HS256')
-    response.set_cookie('samanvay_session', token, secure=True, httponly=True, samesite='lax', max_age=14400, path='/api')
-    response.set_cookie('samanvay_csrf', csrf, secure=True, httponly=False, samesite='lax', max_age=14400, path='/')
+    token = jwt.encode({'sub': user['id'], 'sid': sid, 'aud': 'samanvay', 'iss': 'samanvay-demo', 'exp': datetime.now(timezone.utc) + timedelta(seconds=SESSION_SECONDS)}, setting('JWT_SECRET'), algorithm='HS256')
+    response.set_cookie('samanvay_session', token, secure=True, httponly=True, samesite='lax', max_age=SESSION_SECONDS, path='/api')
+    response.set_cookie('samanvay_csrf', csrf, secure=True, httponly=False, samesite='lax', max_age=SESSION_SECONDS, path='/')
     return Principal(**user)
 @router.get('/me', response_model=Principal)
 async def me(user: Principal = Depends(principal)):
