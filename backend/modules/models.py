@@ -10,6 +10,11 @@ class CreateApplication(StrictModel):
 class DemoJourney(StrictModel):
     scenario: Literal['success', 'timeout_after_commit', 'treasury_unavailable'] = 'success'
     course_code: Literal['DATA_ANALYTICS', 'ELECTRIC_VEHICLES', 'WEB_DEVELOPMENT'] = 'DATA_ANALYTICS'
+    review: Literal['manual', 'auto'] = 'auto'
+class ReviewDecision(StrictModel):
+    decision: Literal['SANCTION', 'REJECT']
+    remarks: str = Field(min_length=5, max_length=500)
+    version: int = Field(ge=0)
 class RetryRequest(StrictModel):
     version: int = Field(ge=0)
     reason: str = Field(min_length=5, max_length=300)
@@ -34,6 +39,7 @@ class StageView(BaseModel):
     evidence: dict[str, Any] | None = None
     policy: dict[str, Any] | None = None
     error: str | None = None
+    review: dict[str, Any] | None = None
 class ApplicationView(BaseModel):
     id: str
     transaction_id: str
@@ -53,6 +59,7 @@ class ApplicationView(BaseModel):
     mappings: list[dict[str, Any]] = []
     canonical: dict[str, Any] = {}
     scenario: str | None = None
+    review_mode: str | None = None
     next_retry_at: str | None = None
     amount: int
     is_demo: bool

@@ -2,7 +2,7 @@
 STAGES = [
     {'id': 'identity', 'name': 'Identity verification', 'system': 'Citizen Registry', 'connector': 'registry', 'event': 'IDENTITY_VERIFIED', 'purpose': 'IDENTITY_VERIFICATION', 'fields': ['identity.subjectReference']},
     {'id': 'eligibility', 'name': 'Eligibility check', 'system': 'Skill Development', 'connector': 'eligibility', 'event': 'ELIGIBILITY_CHECKED', 'purpose': 'SKILL_BENEFIT_ELIGIBILITY', 'fields': ['person.dateOfBirth', 'identity.verificationStatus', 'person.globalReference', 'course.code']},
-    {'id': 'approval', 'name': 'Department approval', 'system': 'Skill Development', 'connector': 'approval', 'event': 'APPLICATION_APPROVED', 'purpose': 'SKILL_BENEFIT_ELIGIBILITY', 'fields': ['eligibility.status']},
+    {'id': 'approval', 'name': 'Department approval', 'system': 'Skill Development', 'connector': 'approval', 'event': 'APPLICATION_APPROVED', 'purpose': 'SKILL_BENEFIT_ELIGIBILITY', 'fields': ['eligibility.status'], 'review': True},
     {'id': 'treasury', 'name': 'Benefit disbursement', 'system': 'State Treasury', 'connector': 'treasury', 'event': 'PAYMENT_COMPLETED', 'purpose': 'BENEFIT_DISBURSEMENT', 'fields': ['benefit.approvalReference', 'benefit.payeeReference', 'benefit.amount']},
 ]
 CONNECTORS = [

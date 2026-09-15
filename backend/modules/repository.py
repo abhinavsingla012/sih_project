@@ -29,8 +29,8 @@ async def save(app, expected_version):
     if result.modified_count!=1: fail(409,'VERSION_CONFLICT','The transaction changed. Refresh and try again.')
     return app
 
-async def create(user, body, key, scenario='success', actor=None):
-    fingerprint=hashlib.sha256(json.dumps({'body':body.model_dump(),'scenario':scenario},sort_keys=True).encode()).hexdigest()
+async def create(user, body, key, scenario='success', actor=None, review_mode='manual'):
+    fingerprint=hashlib.sha256(json.dumps({'body':body.model_dump(),'scenario':scenario,'review_mode':review_mode},sort_keys=True).encode()).hexdigest()
     old=await db.applications.find_one({'owner_id':user['id'],'idempotency_key':key},{'_id':0})
     if old:
         if old['fingerprint']!=fingerprint: fail(409,'IDEMPOTENCY_CONFLICT','This submission key belongs to different application data.')
@@ -38,19 +38,20 @@ async def create(user, body, key, scenario='success', actor=None):
     stamp=now(); tx=uid('TXN'); app_id=uid(f'APP-MH-{datetime.now(timezone.utc).year}')
     expiry=(datetime.now(timezone.utc)+timedelta(days=30)).isoformat()
     consents=[{'id':uid('CNS'),'recipient':dept,'purpose':purpose,'fields':sorted(fields),'state':'ACTIVE','granted_at':stamp,'expires_at':expiry,'subject':user['id'],'transaction_id':tx,'policy_version':'field-policy-v1','actor':actor or user['id']} for dept in ('eligibility','treasury') for purpose,fields in FIELD_RULES[dept].items()]
-    app={'id':app_id,'transaction_id':tx,'owner_id':user['id'],'owner_name':user['name'],'subject':user['subject'],'person_reference':user['person_reference'],'service_code':body.service_code,'course_code':body.course_code,'district':body.district,'amount':15000,'status':'SUBMITTED','created_at':stamp,'updated_at':stamp,'version':0,'workflow_version':'skill-benefit-v1','canonical_version':'1','idempotency_key':key,'fingerprint':fingerprint,'departments':['registry','eligibility','treasury'],'stages':[{**{k:d[k] for k in ('id','name','system','connector')},'state':'PENDING','operation_id':uid('OP'),'attempts':[],'external_id':None,'evidence':None,'policy':None} for d in STAGES],'events':[],'audit':[],'consents':consents,'mappings':[],'canonical':{},'scenario':scenario,'next_retry_at':None,'is_demo':True}
+    app={'id':app_id,'transaction_id':tx,'owner_id':user['id'],'owner_name':user['name'],'subject':user['subject'],'person_reference':user['person_reference'],'service_code':body.service_code,'course_code':body.course_code,'district':body.district,'amount':15000,'status':'SUBMITTED','created_at':stamp,'updated_at':stamp,'version':0,'workflow_version':'skill-benefit-v1','canonical_version':'1','idempotency_key':key,'fingerprint':fingerprint,'departments':['registry','eligibility','treasury'],'stages':[{**{k:d[k] for k in ('id','name','system','connector')},'state':'PENDING','operation_id':uid('OP'),'attempts':[],'external_id':None,'evidence':None,'policy':None,'review':None} for d in STAGES],'events':[],'audit':[],'consents':consents,'mappings':[],'canonical':{},'scenario':scenario,'review_mode':review_mode,'next_retry_at':None,'is_demo':True}
     emit(app,'APPLICATION_CREATED',actor or user['id'],payload={'result':'ACCEPTED','consent_ids':[c['id'] for c in consents]})
     try: await db.applications.insert_one(copy.deepcopy(app))
     except DuplicateKeyError:
-        return await create(user,body,key,scenario,actor)
+        return await create(user,body,key,scenario,actor,review_mode)
     return app
 
 def project(app,user,full=True):
     safe=copy.deepcopy(app)
     if user.role=='citizen':
-        safe.update(events=[],audit=[],mappings=[],canonical={},scenario=None)
+        safe.update(events=[],audit=[],mappings=[],canonical={},scenario=None,review_mode=None)
         for stage in safe['stages']:
-            stage.update(evidence=None,policy=None,attempts=[],operation_id='',external_id=None)
+            review=stage.get('review')
+            stage.update(evidence=None,policy=None,attempts=[],operation_id='',external_id=None,review={k:v for k,v in review.items() if k!='officer_id'} if review else None)
     elif user.role=='official':
         safe['canonical']={k:v for k,v in safe['canonical'].items() if k=='eligibility'}
         safe['events']=[e for e in safe['events'] if e.get('stage_id') in ('eligibility','approval')]

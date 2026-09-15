@@ -26,6 +26,7 @@ class Principal(BaseModel):
     role: Literal['citizen', 'operator', 'auditor', 'official', 'service']
     department: str | None = None
     subject: str | None = None
+    designation: str | None = None
 class IdentityAdapter:
     async def authenticate_user(self, email: str, password: str):
         raise NotImplementedError

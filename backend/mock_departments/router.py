@@ -42,6 +42,8 @@ class EligibilityResponse(BaseModel):
 class ApprovalRequest(StrictModel):
     operation_id: str = Field(max_length=100)
     beneficiary_id: str = Field(max_length=100)
+    officer_reference: str | None = Field(default=None, max_length=100)
+    remarks: str | None = Field(default=None, max_length=500)
 class ApprovalResponse(BaseModel):
     approval_ref: str
     decision: Literal['SANCTIONED']
@@ -86,7 +88,7 @@ async def check(body: EligibilityRequest, service=Depends(service_principal)):
 async def approve(body: ApprovalRequest, service=Depends(service_principal)):
     eligible = await db.mock_eligibility.find_one({'response.beneficiary_id':body.beneficiary_id,'response.verification':'SUCCESS'}, {'_id':0})
     if not eligible: fail(409, 'NOT_ELIGIBLE', 'An eligible department decision is required.')
-    await db.mock_eligibility.update_one({'operation_id':body.operation_id},{'$setOnInsert':{'operation_id':body.operation_id,'response':{'approval_ref':uid('APR'),'decision':'SANCTIONED'},'created_at':now()}}, upsert=True)
+    await db.mock_eligibility.update_one({'operation_id':body.operation_id},{'$setOnInsert':{'operation_id':body.operation_id,'response':{'approval_ref':uid('APR'),'decision':'SANCTIONED'},'sanctioned_by':body.officer_reference,'remarks':body.remarks,'created_at':now()}}, upsert=True)
     doc = await db.mock_eligibility.find_one({'operation_id':body.operation_id}, {'_id':0})
     return ApprovalResponse(**doc['response'])
 

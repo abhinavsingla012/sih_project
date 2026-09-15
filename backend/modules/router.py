@@ -8,13 +8,13 @@ from core.config import setting,DEMO
 from core.database import db,bus,now,uid
 from core.errors import fail
 from modules.auth import principal,Principal
-from modules.models import CreateApplication,DemoJourney,ApplicationView,ApplicationList,RetryRequest,RevokeRequest,ScenarioRequest,DataAccessRequest
+from modules.models import CreateApplication,DemoJourney,ApplicationView,ApplicationList,RetryRequest,RevokeRequest,ScenarioRequest,DataAccessRequest,ReviewDecision
 from modules.repository import load,save,create,project,emit
 from modules.policy import authorize,visibility,exchange_decision,FIELD_RULES
 from modules.events import publish_pending,STREAM,GROUP
 from modules.definitions import CONNECTORS,MAPPINGS,STAGES
 from modules.recovery import retry
-from modules.connectors import eligibility_token
+from modules.connectors import eligibility_token,REGISTRY
 from mock_departments.router import service_principal
 
 router=APIRouter(prefix='/api',tags=['Interoperability'])
@@ -69,6 +69,33 @@ async def retry_stage(key:str,stage_id:str,body:RetryRequest,user:Principal=Depe
     app=await retry(app,body.version,body.reason,user.id,idem)
     return project(app,user)
 
+@router.get('/reviews',response_model=ApplicationList)
+async def reviews(user:Principal=Depends(principal),state:str=Query('pending',pattern='^(pending|decided)$'),limit:int=Query(50,ge=1,le=100)):
+    authorize(user,'inspect')
+    match={'id':'approval','state':'AWAITING_REVIEW'} if state=='pending' else {'id':'approval','review.decided_at':{'$exists':True},'review.mode':'manual'}
+    q={'$and':[visibility(user),{'stages':{'$elemMatch':match}}]}
+    sort_key='stages.2.review.requested_at' if state=='pending' else 'updated_at'
+    docs=await db.applications.find(q,{'_id':0}).sort(sort_key,1 if state=='pending' else -1).limit(limit).to_list(limit)
+    return ApplicationList(items=[project(d,user,False) for d in docs],total=await db.applications.count_documents(q))
+
+@router.post('/reviews/{key}/decision',response_model=ApplicationView)
+async def decide_review(key:str,body:ReviewDecision,user:Principal=Depends(principal)):
+    authorize(user,'review');app=await load(key,user)
+    stage=next(s for s in app['stages'] if s['id']=='approval')
+    if user.department!=REGISTRY['approval'].department:fail(403,'FORBIDDEN','Only the approving department can decide this case.')
+    if stage['state']!='AWAITING_REVIEW':fail(409,'NOT_REVIEWABLE','This application is not awaiting a department decision.')
+    if app['version']!=body.version:fail(409,'VERSION_CONFLICT','The case changed. Refresh and try again.')
+    v=app['version'];outcome='SANCTIONED' if body.decision=='SANCTION' else 'REJECTED'
+    stage['review'].update(decision=outcome,remarks=body.remarks.strip(),officer_id=user.id,officer_name=user.name,designation=user.designation,decided_at=now())
+    decided=emit(app,'REVIEW_DECIDED',user.id,stage['id'],{'result':outcome,'remarks':stage['review']['remarks'],'officer':user.name})
+    if outcome=='SANCTIONED':
+        stage['state']='READY';app['status']='PROCESSING'
+        emit(app,'STAGE_REQUESTED','review',stage['id'],{'operation_id':stage['operation_id']},decided['id'])
+    else:
+        stage['state']='REJECTED';stage['error']=f'Rejected by the department: {stage["review"]["remarks"]}';app['status']='REJECTED'
+        emit(app,'APPLICATION_REJECTED',user.id,stage['id'],{'result':'REJECTED','remarks':stage['review']['remarks']},decided['id'])
+    await save(app,v);await publish_pending(app['id']);return project(app,user)
+
 @router.post('/applications/{key}/consents/{consent_id}/revoke',response_model=ApplicationView)
 async def revoke(key:str,consent_id:str,body:RevokeRequest,user:Principal=Depends(principal)):
     app=await load(key,user);authorize(user,'revoke',app);v=app['version']
@@ -84,7 +111,7 @@ async def demo_journey(body:DemoJourney,user:Principal=Depends(principal),key:st
     authorize(user,'operate')
     if not DEMO:fail(404,'NOT_FOUND','Demo controls are disabled.')
     citizen=await db.users.find_one({'id':'USR-CITIZEN'},{'_id':0})
-    app=await create(citizen,CreateApplication(course_code=body.course_code,district='Pune',eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}')
+    app=await create(citizen,CreateApplication(course_code=body.course_code,district='Pune',eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}',body.review)
     await db.demo_scenarios.update_one({'transaction_id':app['transaction_id']},{'$setOnInsert':{'transaction_id':app['transaction_id'],'scenario':body.scenario}},upsert=True)
     await publish_pending(app['id']);return project(app,user)
 
@@ -168,13 +195,14 @@ async def overview(user:Principal=Depends(principal)):
     try: redis_ok=await bus.ping();heartbeat=await bus.get('samanvay:consumer:heartbeat');pending=await bus.xpending(STREAM,GROUP);stream_length=await bus.xlen(STREAM)
     except Exception:redis_ok=False;heartbeat=None;pending={'pending':None};stream_length=None
     completed=sum(d['status']=='COMPLETED' for d in docs)
-    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING') for d in docs),'attention':len(attention),'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
+    awaiting_review=sum(d['status']=='UNDER_REVIEW' for d in docs)
+    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING','UNDER_REVIEW') for d in docs),'awaiting_review':awaiting_review,'attention':len(attention),'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
 
 @router.get('/notifications')
 async def notifications(user:Principal=Depends(principal)):
     q=visibility(user);docs=await db.applications.find(q,{'_id':0,'id':1,'events':1}).sort('updated_at',-1).limit(50).to_list(50)
     receipt=await db.notification_reads.find_one({'user_id':user.id},{'_id':0}) or {'ids':[]}
-    items=[{'id':e['id'],'application_id':a['id'],'type':e['type'],'timestamp':e['timestamp'],'read':e['id'] in receipt['ids']} for a in docs for e in a['events'] if e['type'] in ('APPLICATION_CREATED','APPLICATION_COMPLETED','INTEGRATION_FAILED','CONSENT_REVOKED')]
+    items=[{'id':e['id'],'application_id':a['id'],'type':e['type'],'timestamp':e['timestamp'],'read':e['id'] in receipt['ids']} for a in docs for e in a['events'] if e['type'] in ('APPLICATION_CREATED','APPLICATION_COMPLETED','INTEGRATION_FAILED','CONSENT_REVOKED','REVIEW_REQUESTED','REVIEW_DECIDED','APPLICATION_REJECTED')]
     return {'items':sorted(items,key=lambda x:x['timestamp'],reverse=True)[:80]}
 
 @router.patch('/notifications/{notification_id}')

@@ -57,9 +57,10 @@ class EligibilityAdapter(ConnectorAdapter):
 class ApprovalAdapter(ConnectorAdapter):
     department='eligibility'
     async def execute(self,app,stage):
-        native=ApprovalResponse.model_validate((await request('POST','/api/mock/eligibility/approve',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'operation_id':stage['operation_id'],'beneficiary_id':app['canonical']['eligibility']['beneficiaryReference']})).json())
-        canonical={'benefit':{'approvalReference':native.approval_ref,'payeeReference':app['canonical']['eligibility']['beneficiaryReference'],'amount':app['amount']}}
-        return CanonicalResult(external_id=native.approval_ref,entity_type='approval',status='APPROVED',canonical=canonical,evidence=evidence('approval-v1',native.model_dump(),canonical,[{'source':'decision','target':'benefit.approvalReference','transform':'SANCTIONED → approved reference'}]))
+        review=stage.get('review') or {}
+        native=ApprovalResponse.model_validate((await request('POST','/api/mock/eligibility/approve',headers={'Authorization':f'Bearer {await eligibility_token()}'},json={'operation_id':stage['operation_id'],'beneficiary_id':app['canonical']['eligibility']['beneficiaryReference'],'officer_reference':review.get('officer_id'),'remarks':review.get('remarks')})).json())
+        canonical={'benefit':{'approvalReference':native.approval_ref,'payeeReference':app['canonical']['eligibility']['beneficiaryReference'],'amount':app['amount'],'sanctionedBy':review.get('officer_name')}}
+        return CanonicalResult(external_id=native.approval_ref,entity_type='approval',status='APPROVED',canonical=canonical,evidence=evidence('approval-v1',{**native.model_dump(),'sanctioned_by':review.get('officer_name')},canonical,[{'source':'decision','target':'benefit.approvalReference','transform':'SANCTIONED → approved reference'},{'source':'officer decision','target':'benefit.sanctionedBy','transform':'officer of record'}]))
 
 def treasury_headers(method,path,body=b''):
     stamp=str(time.time()); content=stamp.encode()+b'.'+method.encode()+b'.'+path.encode()+b'.'+body

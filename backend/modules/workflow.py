@@ -15,7 +15,17 @@ async def prepare(app,index,event):
     stage=app['stages'][index]
     if stage['state']!='PENDING': return
     if any(s['state']!='COMPLETED' for s in app['stages'][:index]): return
-    version=app['version']; stage['state']='READY'; app['status']='PROCESSING'
+    version=app['version']
+    if STAGES[index].get('review') and not (stage.get('review') or {}).get('decision'):
+        if app.get('review_mode','manual')=='auto':
+            stage['review']={'requested_at':now(),'mode':'auto','decision':'SANCTIONED','remarks':'Automatic sanction for a demonstration drill; no officer review.','officer_name':'Demonstration auto-sanction','designation':'Simulated department rule','decided_at':now()}
+            emit(app,'REVIEW_DECIDED','service:demo-auto-sanction',stage['id'],{'result':'SANCTIONED','mode':'auto'},event['id'])
+        else:
+            stage['state']='AWAITING_REVIEW'; app['status']='UNDER_REVIEW'
+            stage['review']={'requested_at':now(),'mode':'manual'}
+            emit(app,'REVIEW_REQUESTED','workflow',stage['id'],{'result':'AWAITING_OFFICER','department':STAGES[index]['system']},event['id'])
+            await save(app,version); await publish_pending(app['id']); return
+    stage['state']='READY'; app['status']='PROCESSING'
     emit(app,'STAGE_REQUESTED','workflow',stage['id'],{'operation_id':stage['operation_id']},event['id'])
     await save(app,version); await publish_pending(app['id'])
 
