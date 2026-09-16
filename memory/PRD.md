@@ -57,6 +57,10 @@ User choices: 3 schemes (Skill training benefit ₹15k / Post-matric scholarship
 - Frontend: citizen service catalogue cards, scheme-aware NewApplicationPage (`?scheme=`), scheme filter on transactions, scheme portfolio table on overview, scheme select in demo dialog, scheme labels in tables/inbox/case page. README rewritten in the affected sections (catalogue, demo script, accounts, seed, API).
 Verified iteration_9: 14/14 multi-scheme pytest (`backend/tests/test_multi_scheme.py`), 12/12 review, 17/17 auth; all frontend flows incl. 390px.
 
+## 2026-09-16 — Brand rename + officer login picker (DONE)
+- Product renamed **Sampark (संपर्क)** in all user-facing text (title, brand mark, login, overview core, footer, README, PRD). Internal codenames unchanged on purpose: cookies `samanvay_session`/`samanvay_csrf`, Redis stream `samanvay:events`/group `samanvay-workflows`, supervisor programs `samanvay-redis`/`samanvay-events`, JWT aud/iss.
+- User report "citizen request shows in operations but not the department manager's inbox": backend routing verified correct (unit-scoped); root cause was the login page only offering the Skill Development officer. Login "Department officer" preset now opens a picker for Skill / Social Justice / Agriculture (`officer-<unit>` testids); pending notices name the deciding department; operator inbox rows show "<Department> inbox".
+
 ## Backlog
 - P2: Verify timeout-after-commit recovery via the scheduled maintenance path creates exactly one treasury payment (manual retry path already verified).
 - P2: Verify the policy probe calls the real service data-access endpoint and yields an audited 403 (browser flow verified; backend contract test pending).
