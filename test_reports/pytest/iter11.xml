@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="15" failures="0" skipped="1" tests="42" time="27.278" timestamp="2026-09-16T04:35:29.279077+00:00" hostname="agent-env-1882dc98-82e7-42cf-88ed-83707bbeda50"><testcase classname="" name="test_same_origin_browser_login" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 61&#10;  async def test_same_origin_browser_login(results: TestResults):&#10;      &quot;&quot;&quot;Browser same-origin login should succeed&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;,&#10;                  &quot;Sec-Fetch-Mode&quot;: &quot;cors&quot;,&#10;                  &quot;Sec-Fetch-Dest&quot;: &quot;empty&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 200:&#10;              data = response.json()&#10;              if data.get(&quot;email&quot;) == CITIZEN_EMAIL:&#10;                  results.record_pass(&quot;Browser same-origin login (Sec-Fetch-Site: same-origin) succeeds&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Browser same-origin login&quot;, f&quot;Invalid response: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Browser same-origin login&quot;, f&quot;Expected 200, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:61&quot;">file /app/tests/test_fetch_metadata_auth.py, line 61
+  async def test_same_origin_browser_login(results: TestResults):
+      """Browser same-origin login should succeed"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin",
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Dest": "empty"
+              }
+          )
+
+          if response.status_code == 200:
+              data = response.json()
+              if data.get("email") == CITIZEN_EMAIL:
+                  results.record_pass("Browser same-origin login (Sec-Fetch-Site: same-origin) succeeds")
+              else:
+                  results.record_fail("Browser same-origin login", f"Invalid response: {data}")
+          else:
+              results.record_fail("Browser same-origin login", f"Expected 200, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:61</error></testcase><testcase classname="" name="test_same_site_browser_login_rejected" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 85&#10;  async def test_same_site_browser_login_rejected(results: TestResults):&#10;      &quot;&quot;&quot;Browser same-site login should be rejected by Fetch Metadata guard&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          # Simulate browser request from same-site but different subdomain&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: NEIGHBOR_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-site&quot;,&#10;                  &quot;Sec-Fetch-Mode&quot;: &quot;cors&quot;,&#10;                  &quot;Sec-Fetch-Dest&quot;: &quot;empty&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Browser same-site login (Sec-Fetch-Site: same-site) rejected with 403 ORIGIN_DENIED&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Browser same-site login&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Browser same-site login&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:85&quot;">file /app/tests/test_fetch_metadata_auth.py, line 85
+  async def test_same_site_browser_login_rejected(results: TestResults):
+      """Browser same-site login should be rejected by Fetch Metadata guard"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          # Simulate browser request from same-site but different subdomain
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": NEIGHBOR_ORIGIN,
+                  "Sec-Fetch-Site": "same-site",
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Dest": "empty"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Browser same-site login (Sec-Fetch-Site: same-site) rejected with 403 ORIGIN_DENIED")
+              else:
+                  results.record_fail("Browser same-site login", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Browser same-site login", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:85</error></testcase><testcase classname="" name="test_cross_site_browser_login_rejected" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 110&#10;  async def test_cross_site_browser_login_rejected(results: TestResults):&#10;      &quot;&quot;&quot;Browser cross-site login should be rejected by Fetch Metadata guard&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: UNTRUSTED_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;cross-site&quot;,&#10;                  &quot;Sec-Fetch-Mode&quot;: &quot;cors&quot;,&#10;                  &quot;Sec-Fetch-Dest&quot;: &quot;empty&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Browser cross-site login (Sec-Fetch-Site: cross-site) rejected with 403 ORIGIN_DENIED&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Browser cross-site login&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Browser cross-site login&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:110&quot;">file /app/tests/test_fetch_metadata_auth.py, line 110
+  async def test_cross_site_browser_login_rejected(results: TestResults):
+      """Browser cross-site login should be rejected by Fetch Metadata guard"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": UNTRUSTED_ORIGIN,
+                  "Sec-Fetch-Site": "cross-site",
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Dest": "empty"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Browser cross-site login (Sec-Fetch-Site: cross-site) rejected with 403 ORIGIN_DENIED")
+              else:
+                  results.record_fail("Browser cross-site login", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Browser cross-site login", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:110</error></testcase><testcase classname="" name="test_same_site_with_public_origin_rejected" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 134&#10;  async def test_same_site_with_public_origin_rejected(results: TestResults):&#10;      &quot;&quot;&quot;Even with public origin, same-site Fetch Metadata should reject&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          # Attacker could forge Origin header, but can't forge Sec-Fetch-Site&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,  # Forged to look trusted&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-site&quot;,  # But browser reveals it's same-site&#10;                  &quot;Sec-Fetch-Mode&quot;: &quot;cors&quot;,&#10;                  &quot;Sec-Fetch-Dest&quot;: &quot;empty&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Same-site request with forged public Origin rejected (Fetch Metadata defense working)&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Same-site with public origin&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Same-site with public origin&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:134&quot;">file /app/tests/test_fetch_metadata_auth.py, line 134
+  async def test_same_site_with_public_origin_rejected(results: TestResults):
+      """Even with public origin, same-site Fetch Metadata should reject"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          # Attacker could forge Origin header, but can't forge Sec-Fetch-Site
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,  # Forged to look trusted
+                  "Sec-Fetch-Site": "same-site",  # But browser reveals it's same-site
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Dest": "empty"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Same-site request with forged public Origin rejected (Fetch Metadata defense working)")
+              else:
+                  results.record_fail("Same-site with public origin", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Same-site with public origin", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:134</error></testcase><testcase classname="" name="test_cross_site_with_internal_origin_rejected" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 159&#10;  async def test_cross_site_with_internal_origin_rejected(results: TestResults):&#10;      &quot;&quot;&quot;Even with internal origin, cross-site Fetch Metadata should reject&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: INTERNAL_ORIGIN,  # Forged to look trusted&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;cross-site&quot;,  # But browser reveals it's cross-site&#10;                  &quot;Sec-Fetch-Mode&quot;: &quot;cors&quot;,&#10;                  &quot;Sec-Fetch-Dest&quot;: &quot;empty&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Cross-site request with forged internal Origin rejected (Fetch Metadata defense working)&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Cross-site with internal origin&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Cross-site with internal origin&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:159&quot;">file /app/tests/test_fetch_metadata_auth.py, line 159
+  async def test_cross_site_with_internal_origin_rejected(results: TestResults):
+      """Even with internal origin, cross-site Fetch Metadata should reject"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": INTERNAL_ORIGIN,  # Forged to look trusted
+                  "Sec-Fetch-Site": "cross-site",  # But browser reveals it's cross-site
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Dest": "empty"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Cross-site request with forged internal Origin rejected (Fetch Metadata defense working)")
+              else:
+                  results.record_fail("Cross-site with internal origin", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Cross-site with internal origin", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:159</error></testcase><testcase classname="" name="test_legacy_client_no_metadata_trusted_origin" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 183&#10;  async def test_legacy_client_no_metadata_trusted_origin(results: TestResults):&#10;      &quot;&quot;&quot;Legacy client without Fetch Metadata but with trusted Origin should succeed&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          # Server client or old browser - no Sec-Fetch-Site header&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN&#10;                  # No Sec-Fetch-* headers&#10;              }&#10;          )&#10;&#10;          if response.status_code == 200:&#10;              data = response.json()&#10;              if data.get(&quot;email&quot;) == CITIZEN_EMAIL:&#10;                  results.record_pass(&quot;Legacy client without Fetch Metadata + trusted Origin succeeds (LEGACY CLIENT SUPPORT)&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Legacy client trusted origin&quot;, f&quot;Invalid response: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Legacy client trusted origin&quot;, f&quot;Expected 200, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:183&quot;">file /app/tests/test_fetch_metadata_auth.py, line 183
+  async def test_legacy_client_no_metadata_trusted_origin(results: TestResults):
+      """Legacy client without Fetch Metadata but with trusted Origin should succeed"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          # Server client or old browser - no Sec-Fetch-Site header
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN
+                  # No Sec-Fetch-* headers
+              }
+          )
+
+          if response.status_code == 200:
+              data = response.json()
+              if data.get("email") == CITIZEN_EMAIL:
+                  results.record_pass("Legacy client without Fetch Metadata + trusted Origin succeeds (LEGACY CLIENT SUPPORT)")
+              else:
+                  results.record_fail("Legacy client trusted origin", f"Invalid response: {data}")
+          else:
+              results.record_fail("Legacy client trusted origin", f"Expected 200, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:183</error></testcase><testcase classname="" name="test_legacy_client_no_metadata_untrusted_origin" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 206&#10;  async def test_legacy_client_no_metadata_untrusted_origin(results: TestResults):&#10;      &quot;&quot;&quot;Legacy client without Fetch Metadata but with untrusted Origin should be rejected&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: UNTRUSTED_ORIGIN&#10;                  # No Sec-Fetch-* headers&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Legacy client without Fetch Metadata + untrusted Origin rejected (exact allowlist working)&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Legacy client untrusted origin&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Legacy client untrusted origin&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:206&quot;">file /app/tests/test_fetch_metadata_auth.py, line 206
+  async def test_legacy_client_no_metadata_untrusted_origin(results: TestResults):
+      """Legacy client without Fetch Metadata but with untrusted Origin should be rejected"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": UNTRUSTED_ORIGIN
+                  # No Sec-Fetch-* headers
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Legacy client without Fetch Metadata + untrusted Origin rejected (exact allowlist working)")
+              else:
+                  results.record_fail("Legacy client untrusted origin", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Legacy client untrusted origin", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:206</error></testcase><testcase classname="" name="test_literal_origin_null_rejected" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 228&#10;  async def test_literal_origin_null_rejected(results: TestResults):&#10;      &quot;&quot;&quot;Literal string 'null' as Origin header should be rejected&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: &quot;null&quot;  # Literal string &quot;null&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Literal 'Origin: null' rejected with 403 ORIGIN_DENIED&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Literal Origin null&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Literal Origin null&quot;, f&quot;Expected 403, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:228&quot;">file /app/tests/test_fetch_metadata_auth.py, line 228
+  async def test_literal_origin_null_rejected(results: TestResults):
+      """Literal string 'null' as Origin header should be rejected"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": "null"  # Literal string "null"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Literal 'Origin: null' rejected with 403 ORIGIN_DENIED")
+              else:
+                  results.record_fail("Literal Origin null", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Literal Origin null", f"Expected 403, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:228</error></testcase><testcase classname="" name="test_no_origin_header_succeeds" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 249&#10;  async def test_no_origin_header_succeeds(results: TestResults):&#10;      &quot;&quot;&quot;No Origin header (server client) should succeed&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD}&#10;              # No Origin header at all&#10;          )&#10;&#10;          if response.status_code == 200:&#10;              data = response.json()&#10;              if data.get(&quot;email&quot;) == CITIZEN_EMAIL:&#10;                  results.record_pass(&quot;No Origin header (server client) succeeds&quot;)&#10;              else:&#10;                  results.record_fail(&quot;No Origin header&quot;, f&quot;Invalid response: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;No Origin header&quot;, f&quot;Expected 200, got {response.status_code}: {response.text}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:249&quot;">file /app/tests/test_fetch_metadata_auth.py, line 249
+  async def test_no_origin_header_succeeds(results: TestResults):
+      """No Origin header (server client) should succeed"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD}
+              # No Origin header at all
+          )
+
+          if response.status_code == 200:
+              data = response.json()
+              if data.get("email") == CITIZEN_EMAIL:
+                  results.record_pass("No Origin header (server client) succeeds")
+              else:
+                  results.record_fail("No Origin header", f"Invalid response: {data}")
+          else:
+              results.record_fail("No Origin header", f"Expected 200, got {response.status_code}: {response.text}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:249</error></testcase><testcase classname="" name="test_invalid_password" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 268&#10;  async def test_invalid_password(results: TestResults):&#10;      &quot;&quot;&quot;Invalid password should return 401&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: &quot;WrongPassword123!&quot;},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 401:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;INVALID_CREDENTIALS&quot;:&#10;                  results.record_pass(&quot;Invalid password returns 401 INVALID_CREDENTIALS&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Invalid password&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Invalid password&quot;, f&quot;Expected 401, got {response.status_code}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:268&quot;">file /app/tests/test_fetch_metadata_auth.py, line 268
+  async def test_invalid_password(results: TestResults):
+      """Invalid password should return 401"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": "WrongPassword123!"},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin"
+              }
+          )
+
+          if response.status_code == 401:
+              data = response.json()
+              if data.get("error", {}).get("code") == "INVALID_CREDENTIALS":
+                  results.record_pass("Invalid password returns 401 INVALID_CREDENTIALS")
+              else:
+                  results.record_fail("Invalid password", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Invalid password", f"Expected 401, got {response.status_code}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:268</error></testcase><testcase classname="" name="test_csrf_and_origin_on_mutation" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 290&#10;  async def test_csrf_and_origin_on_mutation(results: TestResults):&#10;      &quot;&quot;&quot;Test CSRF and Origin validation on authenticated mutations&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0, follow_redirects=True) as client:&#10;          # Login first&#10;          login_response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;&#10;              }&#10;          )&#10;&#10;          if login_response.status_code != 200:&#10;              results.record_fail(&quot;CSRF mutation test&quot;, f&quot;Login failed: {login_response.status_code}&quot;)&#10;              return&#10;&#10;          # Extract cookies&#10;          session_cookie = None&#10;          csrf_token = None&#10;          for cookie in login_response.cookies.jar:&#10;              if cookie.name == &quot;samanvay_session&quot;:&#10;                  session_cookie = cookie.value&#10;              elif cookie.name == &quot;samanvay_csrf&quot;:&#10;                  csrf_token = cookie.value&#10;&#10;          if not session_cookie or not csrf_token:&#10;              results.record_fail(&quot;CSRF mutation test&quot;, &quot;Missing session or CSRF token&quot;)&#10;              return&#10;&#10;          # Test 1: Valid CSRF + trusted origin should succeed&#10;          app_data = {&#10;              &quot;service_code&quot;: &quot;MH_SKILL_BENEFIT&quot;,&#10;              &quot;option_code&quot;: &quot;DATA_ANALYTICS&quot;,&#10;              &quot;district&quot;: &quot;Pune&quot;,&#10;              &quot;eligibility_consent&quot;: True,&#10;              &quot;payment_consent&quot;: True&#10;          }&#10;&#10;          response = await client.post(&#10;              &quot;/api/applications&quot;,&#10;              json=app_data,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;X-CSRF-Token&quot;: csrf_token,&#10;                  &quot;Idempotency-Key&quot;: &quot;test-csrf-valid&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code in (200, 201):&#10;              results.record_pass(&quot;Valid CSRF + trusted Origin succeeds on mutation&quot;)&#10;          else:&#10;              results.record_fail(&quot;Valid CSRF + trusted Origin&quot;, f&quot;Expected 200/201, got {response.status_code}: {response.text}&quot;)&#10;&#10;          # Test 2: Invalid CSRF should be rejected&#10;          response = await client.post(&#10;              &quot;/api/applications&quot;,&#10;              json=app_data,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;X-CSRF-Token&quot;: &quot;invalid_token_12345&quot;,&#10;                  &quot;Idempotency-Key&quot;: &quot;test-csrf-invalid&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;CSRF_DENIED&quot;:&#10;                  results.record_pass(&quot;Invalid CSRF rejected with 403 CSRF_DENIED&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Invalid CSRF&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Invalid CSRF&quot;, f&quot;Expected 403, got {response.status_code}&quot;)&#10;&#10;          # Test 3: Valid CSRF but untrusted origin should be rejected&#10;          response = await client.post(&#10;              &quot;/api/applications&quot;,&#10;              json=app_data,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie},&#10;              headers={&#10;                  &quot;Origin&quot;: UNTRUSTED_ORIGIN,&#10;                  &quot;X-CSRF-Token&quot;: csrf_token,&#10;                  &quot;Idempotency-Key&quot;: &quot;test-csrf-evil-origin&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code == 403:&#10;              data = response.json()&#10;              if data.get(&quot;error&quot;, {}).get(&quot;code&quot;) == &quot;ORIGIN_DENIED&quot;:&#10;                  results.record_pass(&quot;Valid CSRF + untrusted Origin rejected with 403 ORIGIN_DENIED&quot;)&#10;              else:&#10;                  results.record_fail(&quot;Valid CSRF + untrusted Origin&quot;, f&quot;Wrong error code: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;Valid CSRF + untrusted Origin&quot;, f&quot;Expected 403, got {response.status_code}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:290&quot;">file /app/tests/test_fetch_metadata_auth.py, line 290
+  async def test_csrf_and_origin_on_mutation(results: TestResults):
+      """Test CSRF and Origin validation on authenticated mutations"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0, follow_redirects=True) as client:
+          # Login first
+          login_response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin"
+              }
+          )
+
+          if login_response.status_code != 200:
+              results.record_fail("CSRF mutation test", f"Login failed: {login_response.status_code}")
+              return
+
+          # Extract cookies
+          session_cookie = None
+          csrf_token = None
+          for cookie in login_response.cookies.jar:
+              if cookie.name == "samanvay_session":
+                  session_cookie = cookie.value
+              elif cookie.name == "samanvay_csrf":
+                  csrf_token = cookie.value
+
+          if not session_cookie or not csrf_token:
+              results.record_fail("CSRF mutation test", "Missing session or CSRF token")
+              return
+
+          # Test 1: Valid CSRF + trusted origin should succeed
+          app_data = {
+              "service_code": "MH_SKILL_BENEFIT",
+              "option_code": "DATA_ANALYTICS",
+              "district": "Pune",
+              "eligibility_consent": True,
+              "payment_consent": True
+          }
+
+          response = await client.post(
+              "/api/applications",
+              json=app_data,
+              cookies={"samanvay_session": session_cookie},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "X-CSRF-Token": csrf_token,
+                  "Idempotency-Key": "test-csrf-valid"
+              }
+          )
+
+          if response.status_code in (200, 201):
+              results.record_pass("Valid CSRF + trusted Origin succeeds on mutation")
+          else:
+              results.record_fail("Valid CSRF + trusted Origin", f"Expected 200/201, got {response.status_code}: {response.text}")
+
+          # Test 2: Invalid CSRF should be rejected
+          response = await client.post(
+              "/api/applications",
+              json=app_data,
+              cookies={"samanvay_session": session_cookie},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "X-CSRF-Token": "invalid_token_12345",
+                  "Idempotency-Key": "test-csrf-invalid"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "CSRF_DENIED":
+                  results.record_pass("Invalid CSRF rejected with 403 CSRF_DENIED")
+              else:
+                  results.record_fail("Invalid CSRF", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Invalid CSRF", f"Expected 403, got {response.status_code}")
+
+          # Test 3: Valid CSRF but untrusted origin should be rejected
+          response = await client.post(
+              "/api/applications",
+              json=app_data,
+              cookies={"samanvay_session": session_cookie},
+              headers={
+                  "Origin": UNTRUSTED_ORIGIN,
+                  "X-CSRF-Token": csrf_token,
+                  "Idempotency-Key": "test-csrf-evil-origin"
+              }
+          )
+
+          if response.status_code == 403:
+              data = response.json()
+              if data.get("error", {}).get("code") == "ORIGIN_DENIED":
+                  results.record_pass("Valid CSRF + untrusted Origin rejected with 403 ORIGIN_DENIED")
+              else:
+                  results.record_fail("Valid CSRF + untrusted Origin", f"Wrong error code: {data}")
+          else:
+              results.record_fail("Valid CSRF + untrusted Origin", f"Expected 403, got {response.status_code}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:290</error></testcase><testcase classname="" name="test_me_endpoint" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 388&#10;  async def test_me_endpoint(results: TestResults):&#10;      &quot;&quot;&quot;Test /me endpoint returns user data&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          # Login&#10;          login_response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;&#10;              }&#10;          )&#10;&#10;          if login_response.status_code != 200:&#10;              results.record_fail(&quot;/me endpoint&quot;, f&quot;Login failed: {login_response.status_code}&quot;)&#10;              return&#10;&#10;          session_cookie = None&#10;          for cookie in login_response.cookies.jar:&#10;              if cookie.name == &quot;samanvay_session&quot;:&#10;                  session_cookie = cookie.value&#10;&#10;          if not session_cookie:&#10;              results.record_fail(&quot;/me endpoint&quot;, &quot;No session cookie&quot;)&#10;              return&#10;&#10;          # Call /me&#10;          me_response = await client.get(&#10;              &quot;/api/auth/me&quot;,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie}&#10;          )&#10;&#10;          if me_response.status_code == 200:&#10;              data = me_response.json()&#10;              if data.get(&quot;email&quot;) == CITIZEN_EMAIL and data.get(&quot;role&quot;) == &quot;citizen&quot;:&#10;                  results.record_pass(&quot;/me endpoint returns correct user data&quot;)&#10;              else:&#10;                  results.record_fail(&quot;/me endpoint&quot;, f&quot;Invalid user data: {data}&quot;)&#10;          else:&#10;              results.record_fail(&quot;/me endpoint&quot;, f&quot;Expected 200, got {me_response.status_code}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:388&quot;">file /app/tests/test_fetch_metadata_auth.py, line 388
+  async def test_me_endpoint(results: TestResults):
+      """Test /me endpoint returns user data"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          # Login
+          login_response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin"
+              }
+          )
+
+          if login_response.status_code != 200:
+              results.record_fail("/me endpoint", f"Login failed: {login_response.status_code}")
+              return
+
+          session_cookie = None
+          for cookie in login_response.cookies.jar:
+              if cookie.name == "samanvay_session":
+                  session_cookie = cookie.value
+
+          if not session_cookie:
+              results.record_fail("/me endpoint", "No session cookie")
+              return
+
+          # Call /me
+          me_response = await client.get(
+              "/api/auth/me",
+              cookies={"samanvay_session": session_cookie}
+          )
+
+          if me_response.status_code == 200:
+              data = me_response.json()
+              if data.get("email") == CITIZEN_EMAIL and data.get("role") == "citizen":
+                  results.record_pass("/me endpoint returns correct user data")
+              else:
+                  results.record_fail("/me endpoint", f"Invalid user data: {data}")
+          else:
+              results.record_fail("/me endpoint", f"Expected 200, got {me_response.status_code}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:388</error></testcase><testcase classname="" name="test_logout_revocation" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 430&#10;  async def test_logout_revocation(results: TestResults):&#10;      &quot;&quot;&quot;Test logout revokes session&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          # Login&#10;          login_response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;&#10;              }&#10;          )&#10;&#10;          if login_response.status_code != 200:&#10;              results.record_fail(&quot;Logout revocation&quot;, f&quot;Login failed: {login_response.status_code}&quot;)&#10;              return&#10;&#10;          session_cookie = None&#10;          csrf_token = None&#10;          for cookie in login_response.cookies.jar:&#10;              if cookie.name == &quot;samanvay_session&quot;:&#10;                  session_cookie = cookie.value&#10;              elif cookie.name == &quot;samanvay_csrf&quot;:&#10;                  csrf_token = cookie.value&#10;&#10;          if not session_cookie or not csrf_token:&#10;              results.record_fail(&quot;Logout revocation&quot;, &quot;Missing session or CSRF token&quot;)&#10;              return&#10;&#10;          # Logout&#10;          logout_response = await client.post(&#10;              &quot;/api/auth/logout&quot;,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;X-CSRF-Token&quot;: csrf_token&#10;              }&#10;          )&#10;&#10;          if logout_response.status_code != 204:&#10;              results.record_fail(&quot;Logout revocation&quot;, f&quot;Logout failed: {logout_response.status_code}&quot;)&#10;              return&#10;&#10;          # Try to use old session&#10;          me_response = await client.get(&#10;              &quot;/api/auth/me&quot;,&#10;              cookies={&quot;samanvay_session&quot;: session_cookie}&#10;          )&#10;&#10;          if me_response.status_code == 401:&#10;              results.record_pass(&quot;Logout revokes session (old session returns 401)&quot;)&#10;          else:&#10;              results.record_fail(&quot;Logout revocation&quot;, f&quot;Old session still valid: {me_response.status_code}&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:430&quot;">file /app/tests/test_fetch_metadata_auth.py, line 430
+  async def test_logout_revocation(results: TestResults):
+      """Test logout revokes session"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          # Login
+          login_response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin"
+              }
+          )
+
+          if login_response.status_code != 200:
+              results.record_fail("Logout revocation", f"Login failed: {login_response.status_code}")
+              return
+
+          session_cookie = None
+          csrf_token = None
+          for cookie in login_response.cookies.jar:
+              if cookie.name == "samanvay_session":
+                  session_cookie = cookie.value
+              elif cookie.name == "samanvay_csrf":
+                  csrf_token = cookie.value
+
+          if not session_cookie or not csrf_token:
+              results.record_fail("Logout revocation", "Missing session or CSRF token")
+              return
+
+          # Logout
+          logout_response = await client.post(
+              "/api/auth/logout",
+              cookies={"samanvay_session": session_cookie},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "X-CSRF-Token": csrf_token
+              }
+          )
+
+          if logout_response.status_code != 204:
+              results.record_fail("Logout revocation", f"Logout failed: {logout_response.status_code}")
+              return
+
+          # Try to use old session
+          me_response = await client.get(
+              "/api/auth/me",
+              cookies={"samanvay_session": session_cookie}
+          )
+
+          if me_response.status_code == 401:
+              results.record_pass("Logout revokes session (old session returns 401)")
+          else:
+              results.record_fail("Logout revocation", f"Old session still valid: {me_response.status_code}")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:430</error></testcase><testcase classname="" name="test_cookie_attributes" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 485&#10;  async def test_cookie_attributes(results: TestResults):&#10;      &quot;&quot;&quot;Test cookie security attributes&quot;&quot;&quot;&#10;      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:&#10;          response = await client.post(&#10;              &quot;/api/auth/login&quot;,&#10;              json={&quot;email&quot;: CITIZEN_EMAIL, &quot;password&quot;: PASSWORD},&#10;              headers={&#10;                  &quot;Origin&quot;: PUBLIC_ORIGIN,&#10;                  &quot;Sec-Fetch-Site&quot;: &quot;same-origin&quot;&#10;              }&#10;          )&#10;&#10;          if response.status_code != 200:&#10;              results.record_fail(&quot;Cookie attributes&quot;, f&quot;Login failed: {response.status_code}&quot;)&#10;              return&#10;&#10;          session_cookie = None&#10;          csrf_cookie = None&#10;&#10;          for cookie in response.cookies.jar:&#10;              if cookie.name == &quot;samanvay_session&quot;:&#10;                  session_cookie = cookie&#10;              elif cookie.name == &quot;samanvay_csrf&quot;:&#10;                  csrf_cookie = cookie&#10;&#10;          errors = []&#10;&#10;          # Session cookie checks&#10;          if session_cookie:&#10;              if not session_cookie.secure:&#10;                  errors.append(&quot;session cookie not Secure&quot;)&#10;              if not session_cookie.has_nonstandard_attr(&quot;HttpOnly&quot;):&#10;                  errors.append(&quot;session cookie not HttpOnly&quot;)&#10;              if session_cookie.path != &quot;/api&quot;:&#10;                  errors.append(f&quot;session cookie path is {session_cookie.path}, expected /api&quot;)&#10;          else:&#10;              errors.append(&quot;session cookie not found&quot;)&#10;&#10;          # CSRF cookie checks&#10;          if csrf_cookie:&#10;              if not csrf_cookie.secure:&#10;                  errors.append(&quot;CSRF cookie not Secure&quot;)&#10;              if csrf_cookie.has_nonstandard_attr(&quot;HttpOnly&quot;):&#10;                  errors.append(&quot;CSRF cookie should NOT be HttpOnly&quot;)&#10;              if csrf_cookie.path != &quot;/&quot;:&#10;                  errors.append(f&quot;CSRF cookie path is {csrf_cookie.path}, expected /&quot;)&#10;          else:&#10;              errors.append(&quot;CSRF cookie not found&quot;)&#10;&#10;          if errors:&#10;              results.record_fail(&quot;Cookie attributes&quot;, &quot;; &quot;.join(errors))&#10;          else:&#10;              results.record_pass(&quot;Cookie attributes correct (Secure, HttpOnly for session, paths)&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:485&quot;">file /app/tests/test_fetch_metadata_auth.py, line 485
+  async def test_cookie_attributes(results: TestResults):
+      """Test cookie security attributes"""
+      async with httpx.AsyncClient(base_url=PUBLIC_URL, timeout=30.0) as client:
+          response = await client.post(
+              "/api/auth/login",
+              json={"email": CITIZEN_EMAIL, "password": PASSWORD},
+              headers={
+                  "Origin": PUBLIC_ORIGIN,
+                  "Sec-Fetch-Site": "same-origin"
+              }
+          )
+
+          if response.status_code != 200:
+              results.record_fail("Cookie attributes", f"Login failed: {response.status_code}")
+              return
+
+          session_cookie = None
+          csrf_cookie = None
+
+          for cookie in response.cookies.jar:
+              if cookie.name == "samanvay_session":
+                  session_cookie = cookie
+              elif cookie.name == "samanvay_csrf":
+                  csrf_cookie = cookie
+
+          errors = []
+
+          # Session cookie checks
+          if session_cookie:
+              if not session_cookie.secure:
+                  errors.append("session cookie not Secure")
+              if not session_cookie.has_nonstandard_attr("HttpOnly"):
+                  errors.append("session cookie not HttpOnly")
+              if session_cookie.path != "/api":
+                  errors.append(f"session cookie path is {session_cookie.path}, expected /api")
+          else:
+              errors.append("session cookie not found")
+
+          # CSRF cookie checks
+          if csrf_cookie:
+              if not csrf_cookie.secure:
+                  errors.append("CSRF cookie not Secure")
+              if csrf_cookie.has_nonstandard_attr("HttpOnly"):
+                  errors.append("CSRF cookie should NOT be HttpOnly")
+              if csrf_cookie.path != "/":
+                  errors.append(f"CSRF cookie path is {csrf_cookie.path}, expected /")
+          else:
+              errors.append("CSRF cookie not found")
+
+          if errors:
+              results.record_fail("Cookie attributes", "; ".join(errors))
+          else:
+              results.record_pass("Cookie attributes correct (Secure, HttpOnly for session, paths)")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:485</error></testcase><testcase classname="" name="test_proxy_limitation_documentation" time="0.000"><error message="failed on setup with &quot;file /app/tests/test_fetch_metadata_auth.py, line 540&#10;  async def test_proxy_limitation_documentation(results: TestResults):&#10;      &quot;&quot;&quot;Document known proxy limitation - this is NOT a security pass&quot;&quot;&quot;&#10;      print(&quot;\n⚠️  KNOWN PROXY LIMITATION (NOT A SECURITY PASS):&quot;)&#10;      print(&quot;    K8s ingress rewrites *.preview.emergentagent.com origins to internal domain.&quot;)&#10;      print(&quot;    This means neighbor/suffix-spoof origins are accepted by proxy before reaching backend.&quot;)&#10;      print(&quot;    Fetch Metadata defense mitigates this for modern browsers (Sec-Fetch-Site: same-site rejected).&quot;)&#10;      print(&quot;    Legacy clients without Fetch Metadata remain vulnerable to proxy rewriting.&quot;)&#10;      print(&quot;    This is an infrastructure limitation, not a backend security pass.\n&quot;)&#10;&#10;      results.record_pass(&quot;Proxy limitation documented (NOT counted as security verification)&quot;)&#10;E       fixture 'results' not found&#10;&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/app/tests/test_fetch_metadata_auth.py:540&quot;">file /app/tests/test_fetch_metadata_auth.py, line 540
+  async def test_proxy_limitation_documentation(results: TestResults):
+      """Document known proxy limitation - this is NOT a security pass"""
+      print("\n⚠️  KNOWN PROXY LIMITATION (NOT A SECURITY PASS):")
+      print("    K8s ingress rewrites *.preview.emergentagent.com origins to internal domain.")
+      print("    This means neighbor/suffix-spoof origins are accepted by proxy before reaching backend.")
+      print("    Fetch Metadata defense mitigates this for modern browsers (Sec-Fetch-Site: same-site rejected).")
+      print("    Legacy clients without Fetch Metadata remain vulnerable to proxy rewriting.")
+      print("    This is an infrastructure limitation, not a backend security pass.\n")
+
+      results.record_pass("Proxy limitation documented (NOT counted as security verification)")
+E       fixture 'results' not found
+&gt;       available fixtures: _asyncio_loop_factory, _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/app/tests/test_fetch_metadata_auth.py:540</error></testcase><testcase classname="tests.test_review_flow" name="test_manual_journey_pauses_under_review" time="2.373" /><testcase classname="tests.test_multi_scheme" name="test_services_returns_three_schemes" time="0.808" /><testcase classname="tests.test_multi_scheme" name="test_officer_scoping_sjsa_sees_only_scholarship" time="0.465" /><testcase classname="tests.test_multi_scheme" name="test_officer_scoping_agri_sees_only_drip" time="0.472" /><testcase classname="tests.test_multi_scheme" name="test_officer_scoping_skill_sees_only_skill" time="0.406" /><testcase classname="tests.test_multi_scheme" name="test_skill_officer_gets_404_on_scholarship_txn" time="0.203" /><testcase classname="tests.test_multi_scheme" name="test_scholarship_end_to_end" time="4.150" /><testcase classname="tests.test_review_flow" name="test_reviews_pending_lists_case" time="2.343" /><testcase classname="tests.test_review_flow" name="test_reviews_forbidden_for_citizen" time="0.477" /><testcase classname="tests.test_review_flow" name="test_sanction_flow" time="3.559" /><testcase classname="tests.test_multi_scheme" name="test_application_without_consent_rejected" time="0.074" /><testcase classname="tests.test_multi_scheme" name="test_monitoring_overview_has_three_schemes" time="0.080" /><testcase classname="tests.test_multi_scheme" name="test_applications_by_status_seeded" time="0.550" /><testcase classname="tests.test_multi_scheme" name="test_seeded_completed_has_full_evidence" time="0.238" /><testcase classname="tests.test_multi_scheme" name="test_seeded_rejected_has_decision" time="0.151" /><testcase classname="tests.test_multi_scheme" name="test_demo_journey_with_drip_success" time="1.811" /><testcase classname="tests.test_review_flow" name="test_reject_flow" time="2.932" /><testcase classname="tests.test_multi_scheme" name="test_demo_journey_treasury_unavailable_scholarship" time="1.722" /><testcase classname="tests.test_multi_scheme" name="test_policy_rule_uses_benefit_eligibility" time="0.068"><skipped type="pytest.skip" message="no policy rules endpoint">/app/backend/tests/test_multi_scheme.py:299: no policy rules endpoint</skipped></testcase><testcase classname="tests.test_multi_scheme" name="test_reset_demo_forbidden_for_citizen" time="0.075" /><testcase classname="tests.test_review_flow" name="test_decision_forbidden_for_operator" time="1.802" /><testcase classname="tests.test_review_flow" name="test_decision_forbidden_for_citizen" time="1.975" /><testcase classname="tests.test_review_flow" name="test_decision_remarks_too_short" time="1.933" /><testcase classname="tests.test_review_flow" name="test_decision_stale_version_conflict" time="1.901" /><testcase classname="tests.test_review_flow" name="test_decision_not_reviewable_after_decision" time="2.002" /><testcase classname="tests.test_review_flow" name="test_auto_mode_completes_without_officer" time="1.810" /><testcase classname="tests.test_review_flow" name="test_citizen_projection_hides_officer_id" time="3.775" /></testsuite></testsuites>

@@ -64,6 +64,12 @@ Verified iteration_9: 14/14 multi-scheme pytest (`backend/tests/test_multi_schem
 ## 2026-09-16 — Stale views after officer approval (FIXED, tested iteration_10)
 User report: after sanction the citizen got the notification but citizen/operator transaction lists kept the old status. Backend was correct; causes were frontend staleness: React Query `staleTime 60s` + `refetchOnWindowFocus:false` (background tabs are timer-throttled by the browser) and cookie sessions shared across tabs (login as another role replaced the tab's session silently). Fix: `index.js` → `staleTime 0`, `refetchOnWindowFocus`, `refetchOnReconnect`; `AuthProvider` re-validates `/auth/me` on focus/visibilitychange → invalidates all queries, or if the session user changed, toast "Signed in as X from another tab · switching workspace" + cache clear + role redirect. Verified: list flips to Completed ≤3 s live, ≤1.5 s after focus; cross-tab switch; logout-elsewhere → login.
 
+## 2026-09-16 — Readable typography + lighter demo data (DONE, tested iteration_11)
+User: "too stuffed", "fix the typography… easy to use by normal people". Design agent guidelines in `/app/design_guidelines.json` applied:
+- Fonts: Plus Jakarta Sans (body/headings), Noto Sans Devanagari (brand caption), JetBrains Mono (IDs). `scripts/lift_typography.py` remapped every hard-coded px size in `App.css`/`government-theme.css` (7–11px → 12–14px; body 16px; H1 28/24px; H2 20px; badges/eyebrows/table headings 12px). Readability layer appended to `government-theme.css`: buttons ≥40px (44px mobile), inputs ≥44px, focus-visible outlines, 64px list rows, 24px card padding, scrollable sidebar, single-column login presets.
+- Data: seed reduced to 36 apps (16 completed, 6 pending = 2 per officer, 4 rejected, 5 exceptions) + Aditi 3 / Rohan 2; 24 synthetic people. Citizen list lost search/status filters (heading "My applications" instead); operator keeps filters. Overview recent = 5.
+- Verified: no text < 12px on 12 routes at 1920 and 390; no horizontal overflow; e2e submit → sanction still works; backend suites green.
+
 ## Backlog
 - P2: Verify timeout-after-commit recovery via the scheduled maintenance path creates exactly one treasury payment (manual retry path already verified).
 - P2: Verify the policy probe calls the real service data-access endpoint and yields an audited 403 (browser flow verified; backend contract test pending).

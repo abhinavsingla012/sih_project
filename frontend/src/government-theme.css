@@ -359,3 +359,10 @@ textarea { min-height: 96px; }
 .summary-stage { align-items: flex-start; }
 .summary-stage > div { line-height: 1.5; }
 .summary-stage > span { flex-shrink: 0; }
+.login-form-area h1 { font-size: 28px; line-height: 1.25; letter-spacing: -0.02em; }
+.review-panel textarea, .review-panel .review-remarks, textarea[data-testid="review-remarks"] { min-height: 96px; }
+.catalogue-card > a, .catalogue-card a[role="button"], .catalogue-card button { min-height: 44px; }
+.summary-stage { min-height: 32px; }
+@media (max-width: 760px) {
+  .login-form-area button[type="submit"], .login-submit, button[data-testid="login-submit-button"], .catalogue-card > a, .sidebar .nav-link { min-height: 44px; }
+}
