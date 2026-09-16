@@ -36,6 +36,19 @@ def _idem():
     return f"itest-{uuid.uuid4().hex}"
 
 
+def _digilocker_grant(cit, docs, application_id=None):
+    """Simulated OAuth 2.0 authorization-code flow: authorize -> allow -> requester callback -> grant id."""
+    state = uuid.uuid4().hex; scope = ",".join(docs)
+    r = cit.get("/api/mock/digilocker/oauth2/1/authorize", params={"client_id": "sampark", "scope": scope, "state": state})
+    assert r.status_code == 200, r.text
+    d = cit.post("/api/mock/digilocker/oauth2/1/authorize/decision", json={"state": state, "scope": scope, "decision": "allow"}).json()
+    body = {"code": d["code"], "state": state}
+    if application_id: body["application_id"] = application_id
+    r = cit.post("/api/digilocker/callback", json=body)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
 def _wait(client, txn, statuses, timeout=25):
     end = time.time() + timeout
     last = None
@@ -151,6 +164,7 @@ def test_scholarship_end_to_end(cit, sjsa, op):
         "service_code": "MH_POST_MATRIC_SCHOLARSHIP",
         "option_code": "UG",
         "district": "Nagpur",
+        "digilocker_grant": _digilocker_grant(cit, ["ADHAR", "CRCER", "INCER"])["grant_id"],
         "eligibility_consent": True,
         "payment_consent": True,
     }
@@ -230,7 +244,7 @@ def test_seeded_completed_has_full_evidence(op):
     txn = target["transaction_id"]
     view = op.get(f"/api/transactions/{txn}").json()
     stages = view["stages"]
-    assert len(stages) == 4
+    assert len(stages) == 5
     for st in stages:
         assert st["state"] == "COMPLETED", f"stage {st['id']} state={st['state']}"
         assert st.get("evidence"), f"stage {st['id']} missing evidence"
@@ -247,7 +261,7 @@ def test_seeded_completed_has_full_evidence(op):
     assert seqs == sorted(seqs), "events not ordered"
     assert any(e.get("kind") == "REVIEW_DECIDED" or "REVIEW_DECIDED" in str(e) for e in events)
     mappings = view.get("mappings", [])
-    assert len(mappings) == 4
+    assert len(mappings) == 5
     ev = op.get(f"/api/transactions/{txn}/payment-evidence").json()
     assert ev["disbursement_count"] == 1
 

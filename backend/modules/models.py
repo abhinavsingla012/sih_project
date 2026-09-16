@@ -5,8 +5,13 @@ class CreateApplication(StrictModel):
     service_code: str = Field(min_length=3, max_length=60)
     option_code: str = Field(min_length=2, max_length=40)
     district: str = Field(min_length=2, max_length=40)
+    digilocker_grant: str | None = Field(default=None, min_length=6, max_length=60)
     eligibility_consent: Literal[True]
     payment_consent: Literal[True]
+class DigiLockerCallback(StrictModel):
+    code: str = Field(min_length=8, max_length=120)
+    state: str = Field(min_length=8, max_length=120)
+    application_id: str | None = Field(default=None, max_length=60)
 class DemoJourney(StrictModel):
     scenario: Literal['success', 'timeout_after_commit', 'treasury_unavailable'] = 'success'
     service_code: str = Field(default='MH_SKILL_BENEFIT', min_length=3, max_length=60)
@@ -41,6 +46,7 @@ class StageView(BaseModel):
     policy: dict[str, Any] | None = None
     error: str | None = None
     review: dict[str, Any] | None = None
+    hold: dict[str, Any] | None = None
 class ApplicationView(BaseModel):
     id: str
     transaction_id: str
@@ -68,6 +74,7 @@ class ApplicationView(BaseModel):
     next_retry_at: str | None = None
     amount: int
     is_demo: bool
+    documents: dict[str, Any] | None = None
 class ApplicationList(BaseModel):
     items: list[ApplicationView]
     total: int

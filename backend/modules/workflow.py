@@ -4,7 +4,7 @@ import httpx
 from fastapi import HTTPException
 from core.database import db, now, uid
 from modules.repository import load, save, emit
-from modules.definitions import STAGES
+from modules.definitions import STAGES, SCHEMES
 from modules.connectors import REGISTRY
 from modules.policy import exchange_decision
 from modules.events import publish_pending
@@ -29,11 +29,21 @@ async def prepare(app,index,event):
     emit(app,'STAGE_REQUESTED','workflow',stage['id'],{'operation_id':stage['operation_id']},event['id'])
     await save(app,version); await publish_pending(app['id'])
 
+async def hold_for_documents(app,stage,event,missing,evidence=None):
+    version=app['version']
+    stage['state']='AWAITING_DOCUMENTS'; app['status']='AWAITING_DOCUMENTS'; stage['lease_until']=None; stage['error']=None
+    if evidence is not None: stage['evidence']=evidence
+    stage['hold']={'missing':missing,'requested_at':now()}
+    emit(app,'DOCUMENTS_REQUIRED','workflow',stage['id'],{'result':'AWAITING_DOCUMENTS','missing':missing},event['id'])
+    await save(app,version); await publish_pending(app['id'])
+
 async def execute_stage(app,index,event):
     stage=app['stages'][index]; config=STAGES[index]; adapter=REGISTRY[config['connector']]
     if stage['state'] not in ('READY','RUNNING'): return True
     if stage['state']=='RUNNING' and stage.get('lease_until','')>now(): return False
     if any(s['state']!='COMPLETED' for s in app['stages'][:index]): return False
+    if config.get('requires') and not app.get(config['requires']):
+        await hold_for_documents(app,stage,event,list(SCHEMES[app['service_code']]['documents'])); return True
     if len(stage['attempts'])>=4:
         version=app['version'];stage['state']='HUMAN_INTERVENTION_REQUIRED';app['status']='HUMAN_INTERVENTION_REQUIRED'
         emit(app,'HUMAN_INTERVENTION_REQUIRED','recovery',stage['id'],{'result':'RETRY_LIMIT'})
@@ -72,12 +82,17 @@ async def execute_stage(app,index,event):
             s['state']=state;current['status']=state;current['next_retry_at']=(datetime.now(timezone.utc)+timedelta(minutes=15*(2**(len(s['attempts'])-1)))).isoformat() if state!='HUMAN_INTERVENTION_REQUIRED' else None
             emit(current,'INTEGRATION_FAILED',f'connector:{config["connector"]}',s['id'],{'result':code,'attempt_id':latest['id'],'retryable':retryable},event['id'])
             emit(current,'HUMAN_INTERVENTION_REQUIRED' if state=='HUMAN_INTERVENTION_REQUIRED' else 'RETRY_SCHEDULED','recovery',s['id'],{'result':state,'next_retry_at':current['next_retry_at']})
+        elif result.status=='DOCUMENTS_REQUIRED':
+            missing=result.canonical['documents']['missing']
+            latest.update(outcome='INCOMPLETE');s.update(state='AWAITING_DOCUMENTS',evidence=result.evidence,error=None);s['hold']={'missing':missing,'requested_at':now()};current['status']='AWAITING_DOCUMENTS'
+            emit(current,'DOCUMENTS_REQUIRED','workflow',s['id'],{'result':'AWAITING_DOCUMENTS','missing':missing},event['id'])
         else:
-            latest.update(outcome='RECONCILED' if recovered else 'SUCCESS');s.update(state='COMPLETED',completed_at=now(),external_id=result.external_id,evidence=result.evidence,error=None)
+            latest.update(outcome='RECONCILED' if recovered else 'SUCCESS');s.update(state='COMPLETED',completed_at=now(),external_id=result.external_id,evidence=result.evidence,error=None);s.pop('hold',None)
             current['canonical'].update(result.canonical);current['next_retry_at']=None
             mapping={'system':adapter.department,'entity_type':result.entity_type,'external_id':result.external_id,'internal_reference':current['person_reference'] if result.entity_type=='person' else current['transaction_id'],'operation_id':s['operation_id'],'stage_id':s['id']}
             if not any(m['external_id']==mapping['external_id'] for m in current['mappings']): current['mappings'].append(mapping)
-            current['status']='REJECTED' if result.status=='INELIGIBLE' else 'COMPLETED' if index==len(STAGES)-1 else 'PROCESSING'
+            current['status']='REJECTED' if result.status in ('INELIGIBLE','DOCUMENT_MISMATCH') else 'COMPLETED' if index==len(STAGES)-1 else 'PROCESSING'
+            if result.status=='DOCUMENT_MISMATCH': s['error']='A shared document failed issuer-signature or holder verification.'
             emit(current,config['event'],f'connector:{config["connector"]}',s['id'],{'result':result.status,'external_id':result.external_id,'mapping_version':result.evidence['mapping_version'],'reconciled':recovered,'policy_decision_id':s['policy']['id']},event['id'])
             if current['status']=='COMPLETED': emit(current,'APPLICATION_COMPLETED','workflow',payload={'result':'COMPLETED'})
         try:

@@ -7,7 +7,10 @@ import httpx
 from pydantic import BaseModel
 from defusedxml.ElementTree import fromstring
 from core.config import setting
+from core.database import db
+from modules.definitions import SCHEMES, DOCUMENT_TYPES
 from mock_departments.router import RegistryResponse, EligibilityResponse, ApprovalResponse
+from mock_departments.digilocker import DocumentEnvelope, sign_document
 
 class CanonicalResult(BaseModel):
     external_id: str
@@ -44,6 +47,30 @@ class RegistryAdapter(ConnectorAdapter):
 
 async def eligibility_token():
     return (await request('POST','/api/mock/eligibility/oauth/token',json={'client_id':'eligibility','client_secret':setting('ELIGIBILITY_SECRET')})).json()['access_token']
+
+def normalize_name(value): return ' '.join((value or '').lower().split())
+
+def document_result(status, results, missing, grant_id, canonical_extra=None):
+    canonical={'documents':{'status':status,'verified':[d['doctype'] for d in results if d['verified']],'missing':missing,'references':{d['doctype']:d['uri'] for d in results}}}
+    return CanonicalResult(external_id=grant_id,entity_type='document_grant',status=status,canonical=canonical,evidence=evidence('digilocker-v1',{'documents':results,'missing':[{'doctype':m,'name':DOCUMENT_TYPES[m]['name'],'issuer_name':DOCUMENT_TYPES[m]['issuer_name']} for m in missing],'requester':'sampark'},canonical,[{'source':'signature','target':'documents.verified','transform':'issuer signature recomputed and compared'},{'source':'holder.name · holder.dob','target':'identity match','transform':'normalised compare with registry; not retained'},{'source':'uri','target':'documents.references','transform':'reference only; document content never stored'}]))
+
+class DigiLockerAdapter(ConnectorAdapter):
+    department='digilocker'
+    async def execute(self,app,stage):
+        scheme=SCHEMES[app['service_code']]; attachment=app['documents']
+        grant=await db.digilocker_grants.find_one({'id':attachment['grant_id']},{'_id':0})
+        if not grant: raise ValueError('Document grant not found')
+        source=await registry_source(app)
+        results=[]; missing=[]
+        for doctype in scheme['documents']:
+            shared=next((d for d in attachment['shared'] if d['doctype']==doctype),None)
+            if not shared: missing.append(doctype); continue
+            native=DocumentEnvelope.model_validate((await request('GET',f'/api/mock/digilocker/oauth2/1/xml/{shared["uri"]}',headers={'Authorization':f'Bearer {grant["access_token"]}'})).json())
+            signature_ok=hmac.compare_digest(sign_document(native.model_dump()),native.signature)
+            holder_ok=normalize_name(native.holder.name)==normalize_name(app['owner_name']) and native.holder.dob==source.dob
+            results.append({'doctype':doctype,'name':native.name,'uri':native.uri,'issuer':native.issuer,'issuer_name':native.issuer_name,'issued_on':native.issued_on,'hash':native.hash,'signature':'VALID' if signature_ok else 'INVALID','holder_match':'MATCH' if holder_ok else 'MISMATCH','verified':signature_ok and holder_ok})
+        status='DOCUMENTS_REQUIRED' if missing else 'VERIFIED' if all(d['verified'] for d in results) else 'DOCUMENT_MISMATCH'
+        return document_result(status,results,missing,grant['id'])
 
 class EligibilityAdapter(ConnectorAdapter):
     department='eligibility'
@@ -84,4 +111,4 @@ class TreasuryAdapter(ConnectorAdapter):
             if e.response.status_code==404: return None
             raise
 
-REGISTRY={'registry':RegistryAdapter(),'eligibility':EligibilityAdapter(),'approval':ApprovalAdapter(),'treasury':TreasuryAdapter()}
+REGISTRY={'registry':RegistryAdapter(),'digilocker':DigiLockerAdapter(),'eligibility':EligibilityAdapter(),'approval':ApprovalAdapter(),'treasury':TreasuryAdapter()}

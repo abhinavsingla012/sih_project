@@ -1,5 +1,5 @@
 import copy,json,hashlib,hmac
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 import httpx
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, HTTPException
 from pydantic import BaseModel,Field
@@ -8,15 +8,16 @@ from core.config import setting,DEMO
 from core.database import db,bus,now,uid
 from core.errors import fail
 from modules.auth import principal,Principal
-from modules.models import CreateApplication,DemoJourney,ApplicationView,ApplicationList,RetryRequest,RevokeRequest,ScenarioRequest,DataAccessRequest,ReviewDecision
-from modules.repository import load,save,create,project,emit
+from modules.models import CreateApplication,DemoJourney,ApplicationView,ApplicationList,RetryRequest,RevokeRequest,ScenarioRequest,DataAccessRequest,ReviewDecision,DigiLockerCallback
+from modules.repository import load,save,create,project,emit,document_attachment,document_consent,auto_grant
 from modules.policy import authorize,visibility,exchange_decision,FIELD_RULES
 from modules.events import publish_pending,STREAM,GROUP
-from modules.definitions import CONNECTORS,MAPPINGS,STAGES,SCHEMES,DISTRICTS,stage_templates
+from modules.definitions import CONNECTORS,MAPPINGS,STAGES,SCHEMES,DISTRICTS,DOCUMENT_TYPES,stage_templates
 from modules.recovery import retry
-from modules.connectors import eligibility_token,REGISTRY
+from modules.connectors import eligibility_token,REGISTRY,request as connector_request
 from modules.dataset import seed_dataset
 from mock_departments.router import service_principal
+from mock_departments.digilocker import sign_document
 
 router=APIRouter(prefix='/api',tags=['Interoperability'])
 class Payload(BaseModel):
@@ -28,7 +29,7 @@ def idempotency(key):
 
 @router.get('/services')
 async def services(user:Principal=Depends(principal)):
-    return {'items':[{**{k:v for k,v in s.items() if k not in ('options','min_age','max_age')},'currency':'INR','options':[{'code':c,'label':l} for c,l in s['options'].items()],'districts':DISTRICTS,'stages':[{'id':t['id'],'name':t['name'],'system':t['system']} for t in stage_templates(s)],'is_demo':True} for s in SCHEMES.values()]}
+    return {'items':[{**{k:v for k,v in s.items() if k not in ('options','min_age','max_age')},'currency':'INR','options':[{'code':c,'label':l} for c,l in s['options'].items()],'districts':DISTRICTS,'documents':[{'code':d,'name':DOCUMENT_TYPES[d]['name'],'issuer_name':DOCUMENT_TYPES[d]['issuer_name'],'short':DOCUMENT_TYPES[d]['short']} for d in s['documents']],'stages':[{'id':t['id'],'name':t['name'],'system':t['system']} for t in stage_templates(s)],'is_demo':True} for s in SCHEMES.values()]}
 
 @router.post('/applications',response_model=ApplicationView,status_code=201)
 async def new_application(body:CreateApplication,user:Principal=Depends(principal),key:str=Header('',alias='Idempotency-Key')):
@@ -71,12 +72,58 @@ async def retry_stage(key:str,stage_id:str,body:RetryRequest,user:Principal=Depe
     app=await retry(app,body.version,body.reason,user.id,idem)
     return project(app,user)
 
+@router.post('/digilocker/callback')
+async def digilocker_callback(body:DigiLockerCallback,user:Principal=Depends(principal)):
+    """Requester side of the OAuth flow: exchange the code, list the issued documents, keep references only."""
+    authorize(user,'create')
+    try:
+        token=(await connector_request('POST','/api/mock/digilocker/oauth2/1/token',json={'grant_type':'authorization_code','code':body.code,'client_id':'sampark','client_secret':setting('DIGILOCKER_CLIENT_SECRET')})).json()
+        if token.get('state')!=body.state: fail(400,'STATE_MISMATCH','The DigiLocker response does not match this request.')
+        files=(await connector_request('GET','/api/mock/digilocker/oauth2/2/files/issued',headers={'Authorization':f'Bearer {token["access_token"]}'})).json()['items']
+    except httpx.HTTPStatusError as exc:
+        fail(400,'DIGILOCKER_EXCHANGE_FAILED',(exc.response.json().get('error') or {}).get('message','DigiLocker rejected the authorization code.') if exc.response.headers.get('content-type','').startswith('application/json') else 'DigiLocker rejected the authorization code.')
+    except httpx.HTTPError: fail(503,'DIGILOCKER_UNAVAILABLE','DigiLocker could not be reached. Try again in a moment.')
+    stamp=now()
+    grant={'id':uid('DLG'),'user_id':user.id,'subject':user.subject,'scope':token['scope'],'access_token':token['access_token'],'expires_at':(datetime.now(timezone.utc)+timedelta(seconds=int(token['expires_in']))).isoformat(),'documents':[{'doctype':f['doctype'],'name':f['name'],'uri':f['uri'],'issuer':f['issuer'],'issuer_name':f['issuer_name'],'issued_on':f['date']} for f in files],'created_at':stamp,'state':body.state}
+    await db.digilocker_grants.insert_one(grant); grant.pop('_id',None)
+    requested=[d for d in token['scope'].split(',') if d in DOCUMENT_TYPES]; have={d['doctype'] for d in grant['documents']}
+    summary={'grant_id':grant['id'],'documents':grant['documents'],'missing':[{'doctype':d,'name':DOCUMENT_TYPES[d]['name'],'issuer_name':DOCUMENT_TYPES[d]['issuer_name']} for d in requested if d not in have],'expires_at':grant['expires_at']}
+    if not body.application_id: return summary
+    app=await load(body.application_id,user)
+    stage=next(s for s in app['stages'] if s['id']=='documents')
+    if stage['state'] not in ('AWAITING_DOCUMENTS','PENDING'): fail(409,'NOT_AWAITING_DOCUMENTS','This application is not waiting for documents.')
+    version=app['version']
+    app['documents']=document_attachment(grant)
+    app['consents']=[c for c in app['consents'] if c['recipient']!='digilocker']+[document_consent(app,user.id,f'digilocker:{grant["id"]}',stamp)]
+    e=emit(app,'DOCUMENTS_SHARED',user.id,'documents',{'result':'SHARED','documents':[d['doctype'] for d in grant['documents']],'grant_id':grant['id']})
+    if stage['state']=='AWAITING_DOCUMENTS':
+        stage['state']='READY'; stage.pop('hold',None); app['status']='PROCESSING'
+        emit(app,'STAGE_REQUESTED','citizen',stage['id'],{'operation_id':stage['operation_id']},e['id'])
+    await save(app,version); await publish_pending(app['id'])
+    return {**summary,'application':project(await load(app['id'],user),user).model_dump()}
+
+@router.get('/documents/{uri}')
+async def document_preview(uri:str,user:Principal=Depends(principal)):
+    """Masked preview of a shared document, fetched live from the locker with the citizen's grant; never persisted."""
+    authorize(user,'read')
+    app=await db.applications.find_one({'$and':[visibility(user),{'documents.shared.uri':uri}]},{'_id':0,'id':1,'documents':1,'stages':1})
+    if not app: fail(404,'NOT_FOUND','Document not found.')
+    grant=await db.digilocker_grants.find_one({'id':app['documents']['grant_id']},{'_id':0})
+    if not grant or grant['expires_at']<=now(): fail(410,'GRANT_EXPIRED','The citizen’s DigiLocker consent has expired; the document can no longer be opened.')
+    try: doc=(await connector_request('GET',f'/api/mock/digilocker/oauth2/1/xml/{uri}',headers={'Authorization':f'Bearer {grant["access_token"]}'})).json()
+    except httpx.HTTPError: fail(503,'DIGILOCKER_UNAVAILABLE','DigiLocker could not be reached.')
+    signature_ok=hmac.compare_digest(sign_document(doc),doc['signature'])
+    stage=next((s for s in app['stages'] if s['id']=='documents'),None)
+    verified=next((d for d in ((stage or {}).get('evidence') or {}).get('source_summary',{}).get('documents',[]) if d['uri']==uri),None)
+    doc['holder']={'name':doc['holder']['name'],'masked_id':doc['holder']['masked_id'],'dob':'XXXX-XX-'+doc['holder']['dob'][-2:]}
+    return {'application_id':app['id'],'document':doc,'signature':'VALID' if signature_ok else 'INVALID','verification':verified,'note':'Simulated DigiLocker document. Content is fetched on demand and never stored by Sampark.'}
+
 @router.get('/reviews',response_model=ApplicationList)
 async def reviews(user:Principal=Depends(principal),state:str=Query('pending',pattern='^(pending|decided)$'),limit:int=Query(50,ge=1,le=100)):
     authorize(user,'inspect')
     match={'id':'approval','state':'AWAITING_REVIEW'} if state=='pending' else {'id':'approval','review.decided_at':{'$exists':True},'review.mode':'manual'}
     q={'$and':[visibility(user),{'stages':{'$elemMatch':match}}]}
-    sort_key='stages.2.review.requested_at' if state=='pending' else 'updated_at'
+    sort_key=f'stages.{next(i for i,s in enumerate(STAGES) if s["id"]=="approval")}.review.requested_at' if state=='pending' else 'updated_at'
     docs=await db.applications.find(q,{'_id':0}).sort(sort_key,1 if state=='pending' else -1).limit(limit).to_list(limit)
     return ApplicationList(items=[project(d,user,False) for d in docs],total=await db.applications.count_documents(q))
 
@@ -115,7 +162,7 @@ async def demo_journey(body:DemoJourney,user:Principal=Depends(principal),key:st
     citizen=await db.users.find_one({'id':'USR-CITIZEN'},{'_id':0})
     scheme=SCHEMES.get(body.service_code)
     if not scheme:fail(422,'UNKNOWN_SERVICE','This service is not in the scheme catalogue.')
-    app=await create(citizen,CreateApplication(service_code=body.service_code,option_code=body.option_code or next(iter(scheme['options'])),district='Pune',eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}',body.review)
+    app=await create(citizen,CreateApplication(service_code=body.service_code,option_code=body.option_code or next(iter(scheme['options'])),district='Pune',digilocker_grant=(await auto_grant(citizen,scheme))['id'],eligibility_consent=True,payment_consent=True),idempotency(key),body.scenario,f'demo-operator:{user.id}',body.review)
     await db.demo_scenarios.update_one({'transaction_id':app['transaction_id']},{'$setOnInsert':{'transaction_id':app['transaction_id'],'scenario':body.scenario}},upsert=True)
     await publish_pending(app['id']);return project(app,user)
 
@@ -167,7 +214,7 @@ async def probe(key:str,user:Principal=Depends(principal)):
 
 @router.get('/connectors')
 async def connectors(user:Principal=Depends(principal)):
-    authorize(user,'inspect');return {'items':CONNECTORS,'canonical_version':'1','workflow_version':'skill-benefit-v1'}
+    authorize(user,'inspect');return {'items':CONNECTORS,'canonical_version':'1','workflow_version':'benefit-v2'}
 
 @router.get('/mappings')
 async def mappings(user:Principal=Depends(principal)):
@@ -207,13 +254,13 @@ async def overview(user:Principal=Depends(principal)):
     completed=sum(d['status']=='COMPLETED' for d in docs)
     awaiting_review=sum(d['status']=='UNDER_REVIEW' for d in docs)
     by_scheme=[{'code':s['code'],'name':s['name'],'department':s['department'],'amount':s['amount'],'total':len(rows),'completed':sum(r['status']=='COMPLETED' for r in rows),'awaiting_review':sum(r['status']=='UNDER_REVIEW' for r in rows),'rejected':sum(r['status']=='REJECTED' for r in rows),'attention':sum(r['status'] in ('RECONCILING','RETRY_SCHEDULED','HUMAN_INTERVENTION_REQUIRED','BLOCKED') for r in rows),'disbursed':sum(r['amount'] for r in rows if r['status']=='COMPLETED')} for s in SCHEMES.values() for rows in [[d for d in docs if d.get('service_code')==s['code']]]]
-    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING','UNDER_REVIEW') for d in docs),'awaiting_review':awaiting_review,'attention':len(attention),'by_scheme':by_scheme,'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
+    return {'total':len(docs),'completed':completed,'active':sum(d['status'] in ('PROCESSING','SUBMITTED','RETRYING','UNDER_REVIEW','AWAITING_DOCUMENTS') for d in docs),'awaiting_documents':sum(d['status']=='AWAITING_DOCUMENTS' for d in docs),'awaiting_review':awaiting_review,'attention':len(attention),'by_scheme':by_scheme,'success_rate':round(successful/len(attempts)*100,1) if attempts else None,'average_latency_ms':round(sum(a['duration_ms'] for a in attempts)/len(attempts)) if attempts else None,'events':sum(len(d['events']) for d in docs),'policy_denials':sum(e['type']=='POLICY_DENIED' for d in docs for e in d['events']),'components':components,'infrastructure':{'mongodb':'HEALTHY','redis':'HEALTHY' if redis_ok else 'UNAVAILABLE','consumer':'HEALTHY' if heartbeat else 'UNAVAILABLE','pending_messages':pending['pending'],'stream_length':stream_length,'last_heartbeat':heartbeat},'scope':'Latest 1,000 visible applications','recent':[project(d,user,False).model_dump() for d in docs[:5]]}
 
 @router.get('/notifications')
 async def notifications(user:Principal=Depends(principal)):
     q=visibility(user);docs=await db.applications.find(q,{'_id':0,'id':1,'events':1}).sort('updated_at',-1).limit(50).to_list(50)
     receipt=await db.notification_reads.find_one({'user_id':user.id},{'_id':0}) or {'ids':[]}
-    items=[{'id':e['id'],'application_id':a['id'],'type':e['type'],'timestamp':e['timestamp'],'read':e['id'] in receipt['ids']} for a in docs for e in a['events'] if e['type'] in ('APPLICATION_CREATED','APPLICATION_COMPLETED','INTEGRATION_FAILED','CONSENT_REVOKED','REVIEW_REQUESTED','REVIEW_DECIDED','APPLICATION_REJECTED')]
+    items=[{'id':e['id'],'application_id':a['id'],'type':e['type'],'timestamp':e['timestamp'],'read':e['id'] in receipt['ids']} for a in docs for e in a['events'] if e['type'] in ('APPLICATION_CREATED','APPLICATION_COMPLETED','INTEGRATION_FAILED','CONSENT_REVOKED','REVIEW_REQUESTED','REVIEW_DECIDED','APPLICATION_REJECTED','DOCUMENTS_REQUIRED','DOCUMENTS_VERIFIED','DOCUMENTS_SHARED')]
     return {'items':sorted(items,key=lambda x:x['timestamp'],reverse=True)[:80]}
 
 @router.patch('/notifications/{notification_id}')

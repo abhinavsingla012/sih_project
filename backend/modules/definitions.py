@@ -6,14 +6,25 @@ SCHEMES = {
     'MH_DRIP_IRRIGATION_SUBSIDY': {'code': 'MH_DRIP_IRRIGATION_SUBSIDY', 'name': 'Drip irrigation subsidy', 'unit': 'agriculture', 'department': 'Agriculture', 'system': 'Agriculture', 'amount': 40000, 'description': 'Capital subsidy for installing micro-irrigation on cultivated farmland.', 'eligibility': 'Age 18–70 · registered landholder · crop under micro-irrigation', 'min_age': 18, 'max_age': 70, 'option_label': 'Crop', 'options': {'SUGARCANE': 'Sugarcane', 'COTTON': 'Cotton', 'GRAPES': 'Grapes', 'POMEGRANATE': 'Pomegranate', 'SOYBEAN': 'Soybean'}, 'icon': 'sprout'},
 }
 UNITS = {s['unit']: s['department'] for s in SCHEMES.values()}
+DOCUMENT_TYPES = {
+    'ADHAR': {'name': 'Aadhaar', 'issuer': 'in.gov.uidai', 'issuer_name': 'Unique Identification Authority of India', 'short': 'UIDAI'},
+    'SSCER': {'name': 'SSC (Class 10) certificate', 'issuer': 'in.gov.maharashtra.msbshse', 'issuer_name': 'Maharashtra State Board of Secondary & Higher Secondary Education', 'short': 'State Board'},
+    'CRCER': {'name': 'Caste certificate', 'issuer': 'in.gov.maharashtra.revenue', 'issuer_name': 'Revenue Department, Government of Maharashtra', 'short': 'Revenue Dept'},
+    'INCER': {'name': 'Income certificate', 'issuer': 'in.gov.maharashtra.revenue', 'issuer_name': 'Revenue Department, Government of Maharashtra', 'short': 'Revenue Dept'},
+    'LNRCD': {'name': '7/12 extract (land record)', 'issuer': 'in.gov.maharashtra.landrecords', 'issuer_name': 'Land Records Department, Government of Maharashtra', 'short': 'Land Records'},
+}
+for _code, _docs in (('MH_SKILL_BENEFIT', ['ADHAR', 'SSCER']), ('MH_POST_MATRIC_SCHOLARSHIP', ['ADHAR', 'CRCER', 'INCER']), ('MH_DRIP_IRRIGATION_SUBSIDY', ['ADHAR', 'LNRCD'])):
+    SCHEMES[_code]['documents'] = _docs
 STAGES = [
     {'id': 'identity', 'name': 'Identity verification', 'system': 'State Resident Registry', 'connector': 'registry', 'event': 'IDENTITY_VERIFIED', 'purpose': 'IDENTITY_VERIFICATION', 'fields': ['identity.subjectReference']},
+    {'id': 'documents', 'name': 'Document verification', 'system': 'DigiLocker', 'connector': 'digilocker', 'event': 'DOCUMENTS_VERIFIED', 'purpose': 'DOCUMENT_VERIFICATION', 'fields': ['documents.uri', 'person.name', 'person.dateOfBirth'], 'requires': 'documents'},
     {'id': 'eligibility', 'name': 'Eligibility check', 'system': 'Line department', 'connector': 'eligibility', 'event': 'ELIGIBILITY_CHECKED', 'purpose': 'BENEFIT_ELIGIBILITY', 'fields': ['person.dateOfBirth', 'identity.verificationStatus', 'person.globalReference', 'scheme.optionCode']},
     {'id': 'approval', 'name': 'Department sanction', 'system': 'Line department', 'connector': 'approval', 'event': 'APPLICATION_APPROVED', 'purpose': 'BENEFIT_ELIGIBILITY', 'fields': ['eligibility.status'], 'review': True},
     {'id': 'treasury', 'name': 'Benefit disbursement', 'system': 'State Treasury', 'connector': 'treasury', 'event': 'PAYMENT_COMPLETED', 'purpose': 'BENEFIT_DISBURSEMENT', 'fields': ['benefit.approvalReference', 'benefit.payeeReference', 'benefit.amount']},
 ]
 CONNECTORS = [
     {'id':'registry','name':'State Resident Registry','department':'Identity authority','description':'Citizen identity verification','protocol':'REST / JSON','auth':'API key','schema_version':'registry-v1','identifier':'citizenId','status_field':'status','status_value':'VERIFIED','canonical_status':'VERIFIED','color':'teal','endpoint':'/api/mock/registry/verify'},
+    {'id':'digilocker','name':'DigiLocker (simulated)','department':'National document wallet','description':'Issuer-signed documents pulled with citizen consent','protocol':'OAuth 2.0 / REST','auth':'Authorization code + bearer token','schema_version':'digilocker-v1','identifier':'uri','status_field':'signature','status_value':'VALID','canonical_status':'VERIFIED','color':'indigo','endpoint':'/api/mock/digilocker/oauth2/1/xml/{uri}'},
     {'id':'eligibility','name':'Line department systems','department':'Skill Development · Social Justice · Agriculture','description':'Scheme eligibility and officer sanction','protocol':'REST / JSON','auth':'Scoped bearer token','schema_version':'eligibility-v1','identifier':'beneficiary_id','status_field':'verification','status_value':'SUCCESS','canonical_status':'ELIGIBLE','color':'blue','endpoint':'/api/mock/eligibility/check'},
     {'id':'treasury','name':'State Treasury (DBT)','department':'Finance department','description':'Idempotent direct benefit transfer','protocol':'Form / XML','auth':'HMAC signature','schema_version':'treasury-v1','identifier':'payment_ref','status_field':'state','status_value':'DISBURSED','canonical_status':'COMPLETED','color':'amber','endpoint':'/api/mock/treasury/disburse'},
 ]
@@ -22,6 +33,10 @@ MAPPINGS = [
         {'source':'citizenId','target':'identity.externalReference','transform':'reference','example_in':'CID-9281','example_out':'CID-9281'},
         {'source':'dob','target':'person.dateOfBirth','transform':'ISO date validation · transient','example_in':'2004-08-19','example_out':'2004-08-19'},
         {'source':'status','target':'identity.verificationStatus','transform':'enum: VERIFIED → VERIFIED','example_in':'VERIFIED','example_out':'VERIFIED'}]},
+    {'id':'digilocker-v1','connector':'digilocker','source':'DigiLocker issued document (XML envelope)','target':'Canonical v1','rows':[
+        {'source':'uri','target':'documents.references[doctype]','transform':'reference only · content never stored','example_in':'in.gov.maharashtra.revenue-INCER-3F9A…','example_out':'in.gov.maharashtra.revenue-INCER-3F9A…'},
+        {'source':'signature','target':'documents.verified','transform':'issuer signature recomputed and compared','example_in':'HMAC-SHA256 hex','example_out':'VALID'},
+        {'source':'holder.name · holder.dob','target':'identity match','transform':'normalised compare with registry · transient','example_in':'Aditi Patil · 2004-08-19','example_out':'MATCH'}]},
     {'id':'eligibility-v1','connector':'eligibility','source':'Line department','target':'Canonical v1','rows':[
         {'source':'beneficiary_id','target':'eligibility.beneficiaryReference','transform':'reference','example_in':'BEN-2201','example_out':'BEN-2201'},
         {'source':'verification','target':'eligibility.status','transform':'enum: SUCCESS → ELIGIBLE','example_in':'SUCCESS','example_out':'ELIGIBLE'},

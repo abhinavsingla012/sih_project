@@ -22,5 +22,9 @@ async def indexes():
     for collection in ('mock_registry', 'mock_eligibility', 'mock_payments'):
         await db[collection].create_index('operation_id', unique=True)
     await db.mock_people.create_index('subject', unique=True)
+    await db.mock_locker_documents.create_index([('subject', 1), ('doctype', 1)], unique=True)
+    await db.mock_locker_documents.create_index('uri', unique=True)
+    await db.mock_locker_codes.create_index('code', unique=True)
+    await db.digilocker_grants.create_index('id', unique=True)
     await db.identifier_mappings.create_index([('system', 1), ('entity_type', 1), ('external_id', 1)], unique=True)
     await db.maintenance_receipts.create_index('id', unique=True)

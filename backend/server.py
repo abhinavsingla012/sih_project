@@ -11,6 +11,7 @@ from modules.dataset import seed_dataset
 from modules.auth import router as auth_router
 from modules.router import router as domain_router
 from mock_departments.router import router as mock_router
+from mock_departments.digilocker import router as digilocker_router
 from modules.events import ensure_group
 
 @asynccontextmanager
@@ -59,5 +60,6 @@ async def validation_error(request,e):
     return JSONResponse(status_code=422,content={'error':{'code':'VALIDATION_ERROR','message':'Please check the required fields and permitted values.','requestId':getattr(request.state,'request_id',None),'details':[{'field':'.'.join(str(x) for x in err['loc']),'message':err['msg']} for err in e.errors()]}})
 
 app.include_router(auth_router);app.include_router(domain_router);app.include_router(mock_router)
+app.include_router(digilocker_router)
 @app.get('/api/')
 async def root():return {'service':'Samanvay','version':'1.0.0','prototype':True}

@@ -29,7 +29,7 @@ for key in ('REDIS_URL', 'MOCK_BASE_URL'):
 for key in (*defaults, 'REDIS_URL', 'MOCK_BASE_URL'):
     if not values.get(key) and not protected.get(key):
         set_key(str(local), key, os.environ.get(key) or defaults.get(key))
-for key in ('JWT_SECRET', 'REGISTRY_KEY', 'ELIGIBILITY_SECRET', 'TREASURY_SECRET'):
+for key in ('JWT_SECRET', 'REGISTRY_KEY', 'ELIGIBILITY_SECRET', 'TREASURY_SECRET', 'DIGILOCKER_CLIENT_SECRET', 'DIGILOCKER_ISSUER_SECRET'):
     if not values.get(key):
         set_key(str(local), key, secrets.token_urlsafe(48))
 set_key(str(local), 'APP_ORIGIN', dotenv_values(root.parent / 'frontend/.env')['REACT_APP_BACKEND_URL'])

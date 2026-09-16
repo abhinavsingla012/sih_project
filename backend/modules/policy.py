@@ -1,8 +1,9 @@
 from core.errors import fail
 from core.database import now, uid
-DEPARTMENTS = {'registry', 'eligibility', 'treasury'}
+DEPARTMENTS = {'registry', 'digilocker', 'eligibility', 'treasury'}
 FIELD_RULES = {
     'registry': {'IDENTITY_VERIFICATION': {'identity.subjectReference'}},
+    'digilocker': {'DOCUMENT_VERIFICATION': {'documents.uri', 'person.name', 'person.dateOfBirth', 'identity.verificationStatus'}},
     'eligibility': {'BENEFIT_ELIGIBILITY': {'person.dateOfBirth', 'identity.verificationStatus', 'person.globalReference', 'scheme.optionCode', 'eligibility.status'}},
     'treasury': {'BENEFIT_DISBURSEMENT': {'benefit.approvalReference', 'benefit.payeeReference', 'benefit.amount'}},
 }

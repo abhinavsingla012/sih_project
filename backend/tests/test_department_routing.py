@@ -6,7 +6,7 @@ import uuid
 import httpx
 import pytest
 
-BASE = os.environ.get("REACT_APP_BACKEND_URL").rstrip("/")
+BASE = (os.environ.get("REACT_APP_BACKEND_URL") or "https://txn-orchestrate.preview.emergentagent.com").rstrip("/")
 ORIGIN = BASE
 PWD = "Demo@2026!"
 
@@ -21,12 +21,22 @@ def _login(email):
     return c
 
 
+def _digilocker_grant(cit, docs):
+    state = uuid.uuid4().hex; scope = ",".join(docs)
+    assert cit.get("/api/mock/digilocker/oauth2/1/authorize", params={"client_id": "sampark", "scope": scope, "state": state}).status_code == 200
+    d = cit.post("/api/mock/digilocker/oauth2/1/authorize/decision", json={"state": state, "scope": scope, "decision": "allow"}).json()
+    r = cit.post("/api/digilocker/callback", json={"code": d["code"], "state": state})
+    assert r.status_code == 200, r.text
+    return r.json()["grant_id"]
+
+
 def test_scholarship_routes_to_sjsa_only():
     citizen = _login("citizen@demo.in")
     payload = {
         "service_code": "MH_POST_MATRIC_SCHOLARSHIP",
         "option_code": "UG",
         "district": "Pune",
+        "digilocker_grant": _digilocker_grant(citizen, ["ADHAR", "CRCER", "INCER"]),
         "eligibility_consent": True,
         "payment_consent": True,
     }
