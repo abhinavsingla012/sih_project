@@ -27,11 +27,11 @@ export const DocumentsPanel = ({app, role}: {app: Application; role: string}) =>
       </div>;})}
       {missing.map(code => <div key={code} className="document-row missing" data-testid={`document-missing-${code}`}><CircleAlert size={18}/><div className="document-main"><strong>{typeOf(code)?.name || code}</strong><span>Not shared yet · {typeOf(code)?.issuer_name || 'issuing department'}</span></div></div>)}
     </div>
-    <Dialog open={!!preview} onOpenChange={v => !v && setPreview(null)}><DialogContent className="product-dialog document-dialog" data-testid="document-preview-dialog">{preview && <DocumentPreview doc={preview}/>}</DialogContent></Dialog>
+    <Dialog open={!!preview} onOpenChange={v => !v && setPreview(null)}><DialogContent className="product-dialog document-dialog" data-testid="document-preview-dialog">{preview && <DocumentPreview doc={preview} applicationId={app.id}/>}</DialogContent></Dialog>
   </section>;
 };
-const DocumentPreview = ({doc}: {doc: SharedDocument}) => {
-  const q = useQuery({queryKey: ['document', doc.uri], queryFn: () => get(`/documents/${encodeURIComponent(doc.uri)}`), retry: false});
+const DocumentPreview = ({doc, applicationId}: {doc: SharedDocument; applicationId: string}) => {
+  const q = useQuery({queryKey: ["document", applicationId, doc.uri], queryFn: () => get(`/applications/${applicationId}/documents/${encodeURIComponent(doc.uri)}`), retry: false});
   if (q.isLoading) return <><DialogTitle>Opening document…</DialogTitle><DialogDescription>Fetching from the simulated DigiLocker with the citizen’s consent.</DialogDescription></>;
   if (q.isError) return <><DialogTitle data-testid="document-preview-error-title">Document unavailable</DialogTitle><DialogDescription data-testid="document-preview-error">{errorMessage(q.error)}</DialogDescription></>;
   const d = q.data.document; const ok = q.data.signature === 'VALID';

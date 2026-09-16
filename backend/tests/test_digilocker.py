@@ -164,7 +164,7 @@ def test_complete_grant_verifies_and_reaches_officer(aditi, sjsa, op):
     case = sjsa.get(f"/api/transactions/{app['transaction_id']}")
     assert case.status_code == 200 and case.json()["documents"]["grant_id"] == summary["grant_id"]
     uri = app["documents"]["shared"][0]["uri"]
-    pv = sjsa.get(f"/api/documents/{uri}")
+    pv = sjsa.get(f"/api/applications/{app['id']}/documents/{uri}")
     assert pv.status_code == 200, pv.text
     body = pv.json()
     assert body["signature"] == "VALID" and body["verification"]["verified"] is True
@@ -172,13 +172,26 @@ def test_complete_grant_verifies_and_reaches_officer(aditi, sjsa, op):
     assert "note" in body
 
 
+def test_auditor_preview_uses_the_case_grant_not_an_older_one(aditi):
+    """Aditi's Aadhaar URI is identical across all her applications; the preview must use THIS case's grant, not an expired seeded one."""
+    auditor = _login("auditor@demo.in")
+    fresh = next(a for a in aditi.get("/api/applications").json()["items"] if a.get("documents") and a["status"] in ("UNDER_REVIEW", "PROCESSING", "COMPLETED") and a["created_at"] > time.strftime("%Y-%m-%dT00:00"))
+    detail = aditi.get(f"/api/applications/{fresh['id']}").json()
+    uri = next(d for d in detail["documents"]["shared"] if d["doctype"] == "ADHAR")["uri"]
+    r = auditor.get(f"/api/applications/{fresh['id']}/documents/{uri}")
+    assert r.status_code == 200, r.text
+    assert r.json()["signature"] == "VALID"
+    auditor.close()
+
+
 def test_preview_scoped_to_department_and_never_for_unknown(skill, aditi):
     apps = aditi.get("/api/applications?service_code=MH_POST_MATRIC_SCHOLARSHIP").json()["items"]
     target = next(a for a in apps if a.get("documents"))
     detail = aditi.get(f"/api/applications/{target['id']}").json()
     uri = next(d for d in detail["documents"]["shared"] if d["doctype"] == "CRCER")["uri"]  # never part of a Skill Development case
-    assert skill.get(f"/api/documents/{uri}").status_code == 404  # skill officer cannot open a social-justice case document
-    assert skill.get("/api/documents/in.gov.uidai-ADHAR-NOPE000000").status_code == 404
+    assert skill.get(f"/api/applications/{target['id']}/documents/{uri}").status_code == 404  # skill officer cannot open a social-justice case
+    sk_apps = skill.get("/api/applications").json()["items"]
+    assert skill.get(f"/api/applications/{sk_apps[0]['id']}/documents/in.gov.uidai-ADHAR-NOPE000000").status_code == 404  # unknown uri on own case
 
 
 def test_rohan_missing_income_certificate_pauses_then_resumes(rohan, sjsa, op):
@@ -205,7 +218,7 @@ def test_rohan_missing_income_certificate_pauses_then_resumes(rohan, sjsa, op):
     assert any(i["id"] == paused["id"] for i in inbox)
     case = sjsa.get(f"/api/transactions/{paused['transaction_id']}").json()
     incer = next(d for d in case["documents"]["shared"] if d["doctype"] == "INCER")
-    pv = sjsa.get(f"/api/documents/{incer['uri']}").json()
+    pv = sjsa.get(f"/api/applications/{paused['id']}/documents/{incer['uri']}").json()
     assert pv["signature"] == "VALID" and pv["document"]["holder"]["name"] == "Rohan Shah" and "annual_income" in pv["document"]["fields"]
     dec = sjsa.post(f"/api/reviews/{paused['transaction_id']}/decision", json={"decision": "SANCTION", "remarks": "Income certificate verified via DigiLocker; sanctioned.", "version": case["version"]})
     assert dec.status_code == 200, dec.text

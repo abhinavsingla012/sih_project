@@ -102,12 +102,11 @@ async def digilocker_callback(body:DigiLockerCallback,user:Principal=Depends(pri
     await save(app,version); await publish_pending(app['id'])
     return {**summary,'application':project(await load(app['id'],user),user).model_dump()}
 
-@router.get('/documents/{uri}')
-async def document_preview(uri:str,user:Principal=Depends(principal)):
-    """Masked preview of a shared document, fetched live from the locker with the citizen's grant; never persisted."""
-    authorize(user,'read')
-    app=await db.applications.find_one({'$and':[visibility(user),{'documents.shared.uri':uri}]},{'_id':0,'id':1,'documents':1,'stages':1})
-    if not app: fail(404,'NOT_FOUND','Document not found.')
+@router.get('/applications/{key}/documents/{uri}')
+async def document_preview(key:str,uri:str,user:Principal=Depends(principal)):
+    """Masked preview of a document shared for this application, fetched live from the locker with the citizen's grant; never persisted."""
+    authorize(user,'read');app=await load(key,user)
+    if not any(d['uri']==uri for d in (app.get('documents') or {}).get('shared',[])): fail(404,'NOT_FOUND','Document not found.')
     grant=await db.digilocker_grants.find_one({'id':app['documents']['grant_id']},{'_id':0})
     if not grant or grant['expires_at']<=now(): fail(410,'GRANT_EXPIRED','The citizen’s DigiLocker consent has expired; the document can no longer be opened.')
     try: doc=(await connector_request('GET',f'/api/mock/digilocker/oauth2/1/xml/{uri}',headers={'Authorization':f'Bearer {grant["access_token"]}'})).json()
