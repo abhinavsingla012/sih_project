@@ -1,4 +1,4 @@
-# Samanvay — SIH26129
+# Sampark — SIH26129
 
 ## Approved objective
 Government interoperability and service orchestration prototype for Maharashtra. We do not replace government systems; we make them work together. Preserve React/FastAPI/MongoDB, existing design and implementation.

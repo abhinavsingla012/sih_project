@@ -1,6 +1,6 @@
 import {RefreshCw, ArrowUpRight, Inbox, Network} from 'lucide-react';
 import {Button} from '../ui/button';
-export const Brand = () => <div className="brand" data-testid="brand"><span className="brand-mark"><Network size={24}/></span><span>Samanvay<span className="brand-caption" lang="mr">समन्वय · महाराष्ट्र</span></span></div>;
+export const Brand = () => <div className="brand" data-testid="brand"><span className="brand-mark"><Network size={24}/></span><span>Sampark<span className="brand-caption" lang="mr">संपर्क · महाराष्ट्र</span></span></div>;
 export const PageHeader = ({eyebrow,title,description,action}:any) => <div className="page-heading"><div><div className="eyebrow" data-testid="page-eyebrow">{eyebrow}</div><h1 data-testid="page-title">{title}</h1>{description&&<p data-testid="page-description">{description}</p>}</div>{action}</div>;
 export const Loading = () => <div className="loading-state" data-testid="loading-state"><RefreshCw className="spin" size={20}/> Loading workspace…</div>;
 export const ErrorState = ({retry,error}:any) => {

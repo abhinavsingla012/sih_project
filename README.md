@@ -1,8 +1,8 @@
-# Samanvay — Government Service Interoperability Fabric
+# Sampark — Government Service Interoperability Fabric
 
 **Smart India Hackathon problem statement SIH26129 — System integration among government digital platforms.**
 
-Samanvay (Marathi/Sanskrit: *coordination*) is a prototype that lets one citizen application flow across
+Sampark (Hindi/Marathi संपर्क: *connection, contact*) is a prototype that lets one citizen application flow across
 independent government systems that were never designed to talk to each other — a State Resident Registry,
 the line department that owns a scheme (Skill Development, Social Justice or Agriculture) and the State
 Treasury — while keeping every department authoritative for its own data. It does not replace any government
@@ -85,7 +85,7 @@ flowchart LR
         OW[Operations workspace]
     end
 
-    subgraph Fabric["Samanvay interoperability fabric (FastAPI)"]
+    subgraph Fabric["Sampark interoperability fabric (FastAPI)"]
         API["/api — orchestration API<br/>auth · CSRF · rate limit · RBAC"]
         WF[Workflow engine<br/>stages · leases · retries]
         POL[Policy & consent engine<br/>field-policy-v1]
@@ -384,7 +384,7 @@ to the unified transaction view, whose **Correlation** panel lists every externa
 | 9:00 | **Real authorization** | On any transaction → **Run authorization check** | The line-department *service token* asks for `citizen.bankAccount`. Result: **HTTP 403 POLICY_DENIED** with a decision ID. Switch to the **Audit trail** tab: the `POLICY_DENIED` entry was recorded *before* the refusal was returned. Sidebar **Policy & consent** shows the allow-list with default DENY. |
 | 10:15 | **Citizen control** | Window B → the application → **Consent** tab → **Revoke consent** on the treasury consent | Revocation is recorded; completed stages stay intact ("not retroactive"), any future treasury exchange for this application would be BLOCKED. |
 | 11:00 | **Isolation & least privilege** | Sign out window B, sign in as `rohan@demo.in` → try to open Aditi's application URL | `Application not found` (404, not 403 — no existence leak). Sign in as `official@demo.in`: only Skill Development cases and only eligibility/sanction evidence are visible; a Skill officer opening a scholarship TXN also gets 404. |
-| 11:45 | **Close** | Window A → **System health** | Success rate, latency per connector, stream length, pending messages, consumer heartbeat. "Departments stay authoritative. Samanvay only coordinates — and proves it." |
+| 11:45 | **Close** | Window A → **System health** | Success rate, latency per connector, stream length, pending messages, consumer heartbeat. "Departments stay authoritative. Sampark only coordinates — and proves it." |
 
 **If something goes wrong on stage**
 
