@@ -21,6 +21,21 @@ export function AuthProvider({children}: {children:React.ReactNode}) {
     });
     return () => api.interceptors.response.eject(id);
   }, [queries]);
+  useEffect(() => {
+    // Sessions are cookies shared by every tab of this browser: signing in as another role elsewhere replaces this tab's session.
+    // Re-check identity whenever the tab comes back into view and switch the workspace instead of polling with a stale role.
+    const revalidate = () => {
+      if (document.visibilityState === 'hidden' || !userRef.current) return;
+      api.get('/auth/me').then(r => {
+        if (r.data?.id && r.data.id !== userRef.current?.id) {
+          toast.info(`Signed in as ${r.data.name} from another tab · switching workspace`, {id: 'session-switched'});
+          queries.clear(); setUser(r.data);
+        } else queries.invalidateQueries();
+      }).catch(() => {});
+    };
+    window.addEventListener('focus', revalidate); document.addEventListener('visibilitychange', revalidate);
+    return () => {window.removeEventListener('focus', revalidate); document.removeEventListener('visibilitychange', revalidate);};
+  }, [queries]);
   const login = async (email:string,password:string) => {
     const {data} = await api.post('/auth/login',{email,password});
     // Confirm the browser actually kept the session cookie (embedded frames with third-party cookies blocked silently drop it).

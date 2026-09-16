@@ -7,8 +7,9 @@ import App from "@/App";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,
-      refetchOnWindowFocus: false,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: (failureCount, error) => (!error?.response || error.response.status >= 500) && failureCount < 2,
     },
   },
