@@ -200,7 +200,7 @@ def test_monitoring_overview_has_three_schemes(op):
     r = op.get("/api/monitoring/overview")
     assert r.status_code == 200
     data = r.json()
-    assert data.get("total", 0) >= 80  # ~109 ± test creations
+    assert data.get("total", 0) >= 30  # ~36 seeded ± test creations
     by_scheme = data.get("by_scheme") or []
     codes = [b.get("code") for b in by_scheme]
     for c in SCHEMES:

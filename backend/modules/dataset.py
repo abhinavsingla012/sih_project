@@ -18,7 +18,7 @@ REMARKS = {
 }
 REJECT_REMARKS = {'skill': 'Training partner could not confirm enrolment for the selected programme.', 'social_justice': 'Institution is not on the recognised list for the current academic year.', 'agriculture': 'Land record shows the survey number is not held in the applicant’s name.'}
 FAILURES = {'CONNECTION_FAILED': 'Could not reach the department.', 'DOWNSTREAM_UNAVAILABLE': 'Department returned HTTP 503.', 'TIMEOUT': 'Department response timed out. Outcome will be reconciled.'}
-MIX = [('completed', 68), ('under_review', 12), ('ineligible', 6), ('officer_rejected', 5), ('retry_scheduled', 4), ('reconciling', 3), ('human_intervention', 3), ('blocked', 3)]
+MIX = [('completed', 16), ('under_review', 6), ('ineligible', 2), ('officer_rejected', 2), ('retry_scheduled', 2), ('reconciling', 1), ('human_intervention', 1), ('blocked', 1)]
 iso = lambda dt: dt.isoformat()
 
 class Builder:
@@ -145,7 +145,7 @@ async def seed_dataset(reset=False, seed=26129):
         await db.users.delete_many({'synthetic': True}); await db.mock_people.delete_many({'synthetic': True})
     elif await db.applications.find_one({'seeded': True}, {'_id': 0, 'id': 1}): return {'seeded': 0, 'skipped': True}
     rng = random.Random(seed); now = datetime.now(timezone.utc)
-    young, farmers, outliers = make_people(rng, 36, 18, 29, 1), make_people(rng, 24, 31, 62, 101), make_people(rng, 6, 37, 52, 201)
+    young, farmers, outliers = make_people(rng, 14, 18, 29, 1), make_people(rng, 8, 31, 62, 101), make_people(rng, 2, 37, 52, 201)
     for person in young + farmers + outliers:
         await db.users.update_one({'id': person['id']}, {'$set': {k: v for k, v in person.items() if k not in ('citizen_id', 'date_of_birth')}}, upsert=True)
         await db.mock_people.update_one({'subject': person['subject']}, {'$set': {'subject': person['subject'], 'citizen_id': person['citizen_id'], 'date_of_birth': person['date_of_birth'], 'status': 'VERIFIED', 'created_at': now.isoformat(), 'synthetic': True}}, upsert=True)

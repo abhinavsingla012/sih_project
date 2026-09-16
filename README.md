@@ -20,7 +20,7 @@ Every application follows the same four-stage journey — identity → eligibili
 disbursement — and pauses at stage 3 until an officer of the owning department decides it from their
 **Review inbox** (human-in-the-loop). Officers only see their own department's cases.
 
-On first start the sandbox seeds a realistic synthetic history (~110 applications over the last 60 days,
+On first start the sandbox seeds a realistic synthetic history (about 40 applications over the last 60 days,
 inbox items for each officer, and an exception backlog); regenerate it any time with
 `python backend/seed_dataset.py --reset` or the *Regenerate demo history* button on the operations overview.
 
@@ -466,9 +466,9 @@ Password for all: `Demo@2026!` (configurable via `DEMO_PASSWORD`).
 
 ### Synthetic demo history
 
-`backend/modules/dataset.py` generates ~110 internally consistent applications (events, audit, stage evidence,
-department mock records and treasury ledger entries) spread over the last 60 days: ~70 completed, ~12 waiting in
-the three officer inboxes, ~11 rejected (ineligible or refused by an officer) and an exception backlog
+`backend/modules/dataset.py` generates about 36 internally consistent applications (events, audit, stage evidence,
+department mock records and treasury ledger entries) spread over the last 60 days: ~16 completed, 6 waiting in
+the three officer inboxes, 4 rejected (ineligible or refused by an officer) and an exception backlog
 (retry scheduled, reconciling, needs investigation, policy blocked). Every seeded case is **actionable** — officers
 can sanction it and operators can recover it through the real workflow. It runs automatically on first start
 when the database has no seeded history; `python seed_dataset.py --reset` (or `POST /api/demo/dataset/reset`)

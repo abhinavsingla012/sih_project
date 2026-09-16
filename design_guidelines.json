@@ -1,0 +1,145 @@
+{
+  "project_name": "Sampark (SIH26129) - Maharashtra Smart Government Integration Portal",
+  "persona_and_theme": {
+    "archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST / TRUSTED GOVERNMENT",
+    "target_audience": "Citizens of Maharashtra (primary), Department Officers, and Operations Officers",
+    "tone": "Trustworthy, authoritative, highly legible, clean, and accessible state government digital portal",
+    "theme_mode": "Light theme primary with deep navy header and saffron state accent line"
+  },
+  "fonts": {
+    "google_fonts_import": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
+    "families": {
+      "headings": "'Plus Jakarta Sans', -apple-system, sans-serif",
+      "body": "'Plus Jakarta Sans', -apple-system, sans-serif",
+      "brand_devanagari": "'Noto Sans Devanagari', 'Plus Jakarta Sans', sans-serif",
+      "mono": "'JetBrains Mono', 'Courier New', monospace"
+    },
+    "rationale": "Plus Jakarta Sans provides high x-height and exceptional readability for government digital interfaces. Noto Sans Devanagari ensures crisp Marathi rendering for brand caption (संपर्क · महाराष्ट्र). JetBrains Mono ensures legible transaction IDs and technical codes."
+  },
+  "typography_type_scale_px": {
+    "page_h1": { "size": "28px", "mobile_size": "24px", "weight": "700", "line_height": "1.25", "letter_spacing": "-0.02em" },
+    "section_h2": { "size": "20px", "mobile_size": "18px", "weight": "600", "line_height": "1.3", "letter_spacing": "-0.01em" },
+    "card_h3": { "size": "16px", "mobile_size": "15px", "weight": "600", "line_height": "1.35", "letter_spacing": "0" },
+    "body_citizen": { "size": "16px", "mobile_size": "15px", "weight": "400", "line_height": "1.6", "letter_spacing": "0" },
+    "body_operator": { "size": "14px", "mobile_size": "14px", "weight": "400", "line_height": "1.5", "letter_spacing": "0" },
+    "secondary_text": { "size": "13px", "mobile_size": "13px", "weight": "400", "line_height": "1.5", "letter_spacing": "0" },
+    "form_label": { "size": "14px", "mobile_size": "14px", "weight": "600", "line_height": "1.4", "letter_spacing": "0" },
+    "form_input": { "size": "15px", "mobile_size": "16px (prevents iOS auto-zoom)", "weight": "400", "line_height": "1.4" },
+    "buttons": { "size": "14px", "mobile_size": "14px", "weight": "600", "line_height": "1.0", "letter_spacing": "0.01em" },
+    "table_headings": { "size": "12px", "mobile_size": "12px", "weight": "600", "line_height": "1.3", "letter_spacing": "0.05em", "text_transform": "uppercase" },
+    "eyebrow_label": { "size": "12px", "mobile_size": "12px", "weight": "600", "line_height": "1.3", "letter_spacing": "0.06em", "text_transform": "uppercase" },
+    "status_badges": { "size": "12px", "mobile_size": "12px", "weight": "600", "line_height": "1.3" },
+    "mono_ids": { "size": "12px", "mobile_size": "12px", "weight": "500", "line_height": "1.4" }
+  },
+  "px_remap_table": {
+    "7": 12,
+    "8": 12,
+    "9": 12,
+    "10": 13,
+    "11": 14,
+    "12": 14,
+    "13": 14,
+    "14": 15,
+    "15": 16,
+    "16": 16,
+    "17": 18,
+    "18": 18,
+    "20": 20,
+    "22": 22,
+    "24": 24,
+    "25": 24,
+    "26": 26,
+    "27": 26,
+    "28": 28,
+    "29": 28,
+    "30": 28,
+    "31": 32,
+    "32": 28,
+    "34": 32,
+    "35": 32,
+    "42": 36
+  },
+  "colors": {
+    "gov_navy": "#0a2540",
+    "saffron_accent": "#e65100",
+    "primary_teal": "#0d6e5b",
+    "primary_teal_hover": "#0a584c",
+    "page_background": "#f4f7f6",
+    "card_background": "#ffffff",
+    "ink_main": "#1e293b",
+    "ink_muted": "#64748b",
+    "border_color": "#cbd5e1",
+    "status_success_bg": "#dcfce7",
+    "status_success_text": "#15803d",
+    "status_warning_bg": "#fef3c7",
+    "status_warning_text": "#b45309",
+    "status_danger_bg": "#fee2e2",
+    "status_danger_text": "#b91c1c"
+  },
+  "density_and_declutter_rules": {
+    "spacing_scale": {
+      "row_height": "min-height 52px for table rows, min-height 64px for application list items",
+      "card_padding": "24px desktop, 18px mobile",
+      "section_gap": "32px desktop, 20px mobile",
+      "page_max_width": "1280px"
+    },
+    "citizen_portal_declutter": {
+      "rule": "Show maximum 3-4 cards or items at a glance with clear primary CTA. Collapsible details for past applications.",
+      "first_time_citizen_view": [
+        "Header with Maharashtra State Emblem + User role switch",
+        "Primary action hero band ('Apply for New Scheme')",
+        "3 Scheme Catalogue Cards (Skill Development, Social Justice, Agriculture)",
+        "My Active Applications table (Max 3 visible by default with 'View All' expander)"
+      ]
+    },
+    "operator_overview_declutter": {
+      "metrics_grid": "4 primary summary metric tiles",
+      "fabric_diagram": "Collapsible or structured 3-connector grid with 20px padding",
+      "recent_journeys": "Limit initial table display to 5 most recent transactions with pagination"
+    }
+  },
+  "interactive_elements": {
+    "buttons": {
+      "min_height_desktop": "40px",
+      "min_height_mobile": "44px (touch target compliant)",
+      "padding": "0 20px",
+      "border_radius": "6px",
+      "focus_state": "outline 2px solid #0d6e5b, outline-offset 2px"
+    },
+    "inputs": {
+      "min_height": "44px",
+      "padding": "0 14px",
+      "font_size": "15px (16px on mobile)",
+      "border": "1px solid #cbd5e1"
+    },
+    "badges": {
+      "font_size": "12px",
+      "padding": "5px 10px",
+      "font_weight": "600",
+      "border_radius": "4px"
+    }
+  },
+  "microcopy_tone_guidelines": {
+    "citizen_facing": {
+      "avoid_jargon": ["orchestration", "canonical mapping", "idempotent retry", "consensus receipt", "policy probe"],
+      "use_plain_language": {
+        "orchestration": "System Processing Step",
+        "canonical mapping": "Standard Application Format",
+        "idempotent retry": "Re-submit Safely",
+        "policy probe": "Eligibility Check",
+        "sanction ledger": "Approval Record"
+      }
+    },
+    "operator_facing": "Keep precise technical metadata (e.g. TXN IDs, lineage trace, payload diffs, connector status)."
+  },
+  "testing_attributes": {
+    "data_testid_requirement": "All interactive elements, role pickers, application forms, scheme cards, filter dropdowns, and sanction buttons MUST include kebab-case data-testid attributes."
+  },
+  "instructions_to_main_agent": [
+    "Inject the Google Fonts import into App.css or index.html.",
+    "Apply the REMAP TABLE to App.css to systematically eliminate 7px-11px text and set body base font-size to 16px.",
+    "Update --font-body to 'Plus Jakarta Sans', sans-serif and brand caption font to 'Noto Sans Devanagari'.",
+    "Ensure touch targets are at least 44px on mobile viewports.",
+    "Maintain the established Maharashtra Navy (#0a2540) and Saffron accent visual identity while decluttering density."
+  ]
+}
